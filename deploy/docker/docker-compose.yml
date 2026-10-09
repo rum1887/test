@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # =========================================================================
+  # FalkorDB: Canonical Graph Store for Workload & Agent Trust Analysis
+  # =========================================================================
+  falkordb:
+    image: falkordb/falkordb:latest
+    container_name: trust-falkordb
+    ports:
+      - "6379:6379"
+    volumes:
+      - falkordb_data:/var/lib/falkordb
+    networks:
+      - trust-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # =========================================================================
+  # Backend API & Enforcement Control Plane
+  # =========================================================================
+  trust-api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.api
+    container_name: trust-api
+    ports:
+      - "8000:8000"
+    environment:
+      - FALKORDB_HOST=falkordb
+      - FALKORDB_PORT=6379
+      - FALKORDB_GRAPH=runtime_trust_layer
+      - RUNTIME_MODE=replay_synthetic
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    networks:
+      - trust-net
+    restart: unless-stopped
+
+  # =========================================================================
+  # Web Console: React + Cytoscape.js Security Dashboard
+  # =========================================================================
+  trust-web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.web
+    container_name: trust-web
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - trust-api
+    networks:
+      - trust-net
+    restart: unless-stopped
+
+networks:
+  trust-net:
+    driver: bridge
+
+volumes:
+  falkordb_data:

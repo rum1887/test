@@ -1,0 +1,26 @@
+# =============================================================================
+# Dockerfile for Runtime Trust Layer Web Console
+# Multi-stage build using Node builder and Nginx alpine server
+# =============================================================================
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY apps/web/package.json ./
+RUN npm install
+
+COPY apps/web/ ./
+RUN npm run build
+
+# Nginx Alpine runtime
+FROM nginx:alpine AS runner
+
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+HEALTHCHECK --interval=15s --timeout=3s --retries=3 \
+    CMD wget -qO- http://localhost/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
