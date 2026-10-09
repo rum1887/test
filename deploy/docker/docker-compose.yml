@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # =========================================================================
   # FalkorDB: Canonical Graph Store for Workload & Agent Trust Analysis
