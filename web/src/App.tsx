@@ -3,6 +3,7 @@ import {
   actOnApproval,
   advanceClock,
   fetchAlerts,
+  fetchApprovals,
   fetchClock,
   fetchEvalResults,
   fetchInvestigation,
@@ -16,6 +17,7 @@ import {
   seedWorld,
 } from './api';
 import { ApprovalsView } from './components/ApprovalsView';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { EvalView } from './components/EvalView';
 import { GraphExplorerView } from './components/GraphExplorerView';
 import { InboxView } from './components/InboxView';
@@ -60,11 +62,7 @@ export const App: React.FC = () => {
         fetchScenarios().catch(() => []),
         fetchAlerts().catch(() => []),
         fetchInvestigations().catch(() => []),
-        fetchAlerts().then(() =>
-          fetch('/api/approvals')
-            .then((r) => r.json())
-            .catch(() => [])
-        ),
+        fetchApprovals().catch(() => []),
         fetchWatches().catch(() => []),
         fetchTasks().catch(() => []),
         fetchSubgraph(undefined, 2).catch(() => ({ nodes: [], edges: [] })),
@@ -182,56 +180,69 @@ export const App: React.FC = () => {
 
       <main className="main-content">
         {currentTab === 'inbox' && (
-          <InboxView
-            scenarios={scenarios}
-            alerts={alerts}
-            onRunScenario={handleRunScenario}
-            isRunning={isActionRunning}
-            onSelectAlert={(id) => {
-              // If id is investigation ID, open story; else run
-              if (id.startsWith('inv-')) {
-                setSelectedInvId(id);
-                setCurrentTab('story');
-              }
-            }}
-          />
+          <ErrorBoundary tabName="Inbox & Scenarios">
+            <InboxView
+              scenarios={scenarios}
+              alerts={alerts}
+              onRunScenario={handleRunScenario}
+              isRunning={isActionRunning}
+              onSelectAlert={(id) => {
+                if (id.startsWith('inv-')) {
+                  setSelectedInvId(id);
+                  setCurrentTab('story');
+                }
+              }}
+            />
+          </ErrorBoundary>
         )}
 
         {currentTab === 'story' && (
-          <InvestigationStoryView
-            investigation={selectedInv}
-            investigations={investigations}
-            onSelectInvestigation={setSelectedInvId}
-            onNavigateToApprovals={() => setCurrentTab('approvals')}
-          />
+          <ErrorBoundary tabName="Investigation Story">
+            <InvestigationStoryView
+              investigation={selectedInv}
+              investigations={investigations}
+              onSelectInvestigation={setSelectedInvId}
+              onNavigateToApprovals={() => setCurrentTab('approvals')}
+            />
+          </ErrorBoundary>
         )}
 
         {currentTab === 'approvals' && (
-          <ApprovalsView
-            approvals={approvals}
-            onActApproval={handleActApproval}
-            isLoading={isActionRunning}
-          />
+          <ErrorBoundary tabName="Approvals & Actions">
+            <ApprovalsView
+              approvals={approvals}
+              onActApproval={handleActApproval}
+              isLoading={isActionRunning}
+            />
+          </ErrorBoundary>
         )}
 
         {currentTab === 'graph' && (
-          <GraphExplorerView
-            subgraph={subgraph}
-            onSearchNode={handleSearchNode}
-            isLoading={isActionRunning}
-          />
+          <ErrorBoundary tabName="Graph Explorer">
+            <GraphExplorerView
+              subgraph={subgraph}
+              onSearchNode={handleSearchNode}
+              isLoading={isActionRunning}
+            />
+          </ErrorBoundary>
         )}
 
         {currentTab === 'watches' && (
-          <WatchesView
-            watches={watches}
-            tasks={tasks}
-            onAdvanceClock={handleAdvanceClock}
-            isLoading={isClockLoading}
-          />
+          <ErrorBoundary tabName="Watches & Schedules">
+            <WatchesView
+              watches={watches}
+              tasks={tasks}
+              onAdvanceClock={handleAdvanceClock}
+              isLoading={isClockLoading}
+            />
+          </ErrorBoundary>
         )}
 
-        {currentTab === 'eval' && <EvalView evalResults={evalResults} />}
+        {currentTab === 'eval' && (
+          <ErrorBoundary tabName="Evaluation Benchmark">
+            <EvalView evalResults={evalResults} />
+          </ErrorBoundary>
+        )}
       </main>
     </div>
   );

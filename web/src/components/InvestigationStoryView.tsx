@@ -160,8 +160,25 @@ export const InvestigationStoryView: React.FC<InvestigationStoryViewProps> = ({
     );
   }
 
-  const isMalicious = investigation.verdict === 'malicious';
-  const isBenign = investigation.verdict === 'benign';
+  const verdictRaw = investigation.verdict as any;
+  const verdictStr: string =
+    typeof verdictRaw === 'object' && verdictRaw !== null
+      ? verdictRaw.verdict || ''
+      : typeof verdictRaw === 'string'
+      ? verdictRaw
+      : '';
+  const isMalicious = verdictStr === 'malicious';
+  const isBenign = verdictStr === 'benign';
+  const verdictSummary =
+    typeof verdictRaw === 'object' && verdictRaw !== null
+      ? verdictRaw.summary || investigation.summary
+      : investigation.summary || 'Investigation in progress.';
+  const verdictClaims: any[] =
+    typeof verdictRaw === 'object' && verdictRaw !== null && Array.isArray(verdictRaw.claims)
+      ? verdictRaw.claims
+      : Array.isArray(investigation.claims)
+      ? investigation.claims
+      : [];
   const hyps = investigation.hypotheses_from_graph || investigation.hypotheses || [];
 
   return (
@@ -279,24 +296,24 @@ export const InvestigationStoryView: React.FC<InvestigationStoryViewProps> = ({
                   <div className="story-step-dot" style={{ backgroundColor: isMalicious ? '#b83432' : '#297a48' }} />
                   <div className="story-step-header">
                     <span className="story-step-title">4. Evidence-Cited Verdict</span>
-                    <span className={`badge ${isMalicious ? 'badge-malicious' : 'badge-benign'}`}>
-                      {investigation.verdict ? investigation.verdict.toUpperCase() : 'PENDING'}
+                    <span className={`badge ${isMalicious ? 'badge-malicious' : isBenign ? 'badge-benign' : 'badge-pending'}`}>
+                      {verdictStr ? verdictStr.toUpperCase() : 'PENDING'}
                     </span>
                   </div>
                   <div className="story-step-content">
                     <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: 8 }}>
-                      {investigation.summary || 'Investigation in progress.'}
+                      {verdictSummary}
                     </p>
-                    {investigation.claims && investigation.claims.length > 0 && (
+                    {verdictClaims.length > 0 && (
                       <div style={{ marginTop: 8 }}>
                         <strong style={{ fontSize: 12, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                           Verified Claims:
                         </strong>
-                        {investigation.claims.map((cl, i) => (
+                        {verdictClaims.map((cl: any, i: number) => (
                           <div key={i} style={{ fontSize: 12, marginTop: 4, paddingLeft: 8, borderLeft: '2px solid var(--border-medium)' }}>
                             "{cl.text}"
                             <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                              Evidence: {cl.evidence_ids.join(', ')}
+                              Evidence: {Array.isArray(cl.evidence_ids) ? cl.evidence_ids.join(', ') : cl.evidence_ids || 'N/A'}
                             </div>
                           </div>
                         ))}

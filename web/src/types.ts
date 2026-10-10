@@ -59,7 +59,7 @@ export interface Investigation {
   alert_id?: string;
   alert_title?: string;
   severity?: string;
-  verdict?: 'benign' | 'malicious' | 'needs_human' | 'insufficient_evidence';
+  verdict?: any;
   confidence?: number;
   summary?: string;
   hypotheses?: Hypothesis[];

@@ -99,5 +99,8 @@ export async function fetchTasks(): Promise<ScheduledTask[]> {
 
 export async function fetchEvalResults(): Promise<Record<string, EvalMetrics>> {
   const res = await fetch(`${API_BASE}/api/eval/results`);
+  if (!res.ok) {
+    throw new Error(`Eval results failed: ${res.status}`);
+  }
   return res.json();
 }
