@@ -1,12 +1,12 @@
 # Runtime Trust Layer
-### Graph-Native Runtime Security Platform for AI Agents & Kubernetes
+### Graph-Native AI Firewall & Dynamic Trust Store for Autonomous Agents
 
-[![CI](https://github.com/red-teaming/trustme/actions/workflows/ci.yml/badge.svg)](https://github.com/red-teaming/trustme/actions)
 [![FalkorDB](https://img.shields.io/badge/Graph_Database-FalkorDB_v4-blue.svg)](https://www.falkordb.com/)
+[![MCP](https://img.shields.io/badge/Protocol-Model_Context_Protocol_(MCP)-8A2BE2.svg)](https://modelcontextprotocol.io/)
 [![Tetragon](https://img.shields.io/badge/Runtime_Sensor-Cilium_Tetragon_eBPF-brightgreen.svg)](https://tetragon.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Runtime Trust Layer** is a graph-native security control plane connecting **Workload Trust** (Kubernetes, RBAC, eBPF), **Agent Trust** (human principals, AI agent sessions, delegated authority, MCP servers), and **Runtime Enforcement** (deterministic policy blocking and hypothetical containment simulation) into a single unified platform powered by **FalkorDB**.
+> **Runtime Trust Layer** is a graph-native runtime security control plane that provides a **Dynamic Storage Graph** of identities, roles, RBAC, AI agents, microservices, and MCP tools, coupled with an **Agentic AI Firewall** that intercepts agent actions across 4 defensive layers, explores multi-hop authority in **FalkorDB**, and enforces deterministic decisions before dangerous tools can execute.
 
 ---
 
