@@ -66,14 +66,14 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
   - [x] Token usage and approximate cost tracking per investigation
   - [x] *Acceptance Gate:* Replay mode runs a scripted dummy investigation deterministically without external API calls.
 
-- [ ] **M6: Analyst Core**
-  - [ ] System prompts (`backend/app/agent/prompts.py`) for planner, reader, and verifier
-  - [ ] Quarantined reader (`backend/app/agent/reader.py`): typed schema extraction, never exposes raw untrusted text, detects injection signals
-  - [ ] Investigation loop (`backend/app/agent/analyst.py`): triage, hypothesis generation, tool use loop, evidence collection, verdict generation
-  - [ ] Verifier (`backend/app/agent/verifier.py`): deterministic evidence existence check + LLM entailment verification
-  - [ ] Durability runner (`backend/app/agent/runner.py`): state persistence in FalkorDB `Investigation` node; resume from graph state
-  - [ ] Kill/resume mid-investigation test
-  - [ ] *Acceptance Gate:* Scenarios Pair 1 and Pair 3 reach correct ground-truth verdicts; cache recorded; kill/resume test passes.
+- [x] **M6: Analyst Core**
+  - [x] System prompts (`backend/app/agent/prompts.py`) for planner, reader, and verifier
+  - [x] Quarantined reader (`backend/app/agent/reader.py`): typed schema extraction, never exposes raw untrusted text, detects injection signals
+  - [x] Investigation loop (`backend/app/agent/analyst.py`): triage, hypothesis generation, tool use loop, evidence collection, verdict generation
+  - [x] Verifier (`backend/app/agent/verifier.py`): deterministic evidence existence check + LLM entailment verification
+  - [x] Durability runner (`backend/app/agent/runner.py`): state persistence in FalkorDB `Investigation` node; resume from graph state
+  - [x] Kill/resume mid-investigation test
+  - [x] *Acceptance Gate:* Scenarios Pair 1 and Pair 3 reach correct ground-truth verdicts; cache recorded; kill/resume test passes.
 
 - [ ] **M7: Act-Verify-Watch-Schedule & Memory**
   - [ ] Human approval workflow: `ApprovalRequest` nodes, pending/approved/rejected states
