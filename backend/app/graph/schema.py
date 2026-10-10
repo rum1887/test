@@ -67,6 +67,7 @@ RELATIONSHIP_TYPES = [
     "MADE_CALL",
     "DESCRIBES",
     "SIMILAR_TO",
+    "TARGETS",
 ]
 
 

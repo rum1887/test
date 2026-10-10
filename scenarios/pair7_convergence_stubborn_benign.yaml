@@ -1,0 +1,61 @@
+id: pair7_convergence_stubborn_benign
+pair_id: pair7_convergence_stubborn
+variant: benign
+title: "Isolated Maintenance on CI Runner with No Session Convergence"
+description: "Pod ci-1 undergoes scheduled maintenance; graph traversal confirms no multi-path convergence to sensitive secrets or agent sessions."
+inject: false
+
+mutations:
+  - action: create_node
+    label: Document
+    id: doc-ticket-ci-maint-701
+    properties:
+      kind: ticket
+      trust: trusted
+      title: "INFRA-334: Scheduled CI Runner Maintenance"
+      body: "Scheduled node patching for CI runner workloads. Approved in maintenance window."
+  - action: create_node
+    label: ChangeSet
+    id: change-ci-maintenance-701
+    properties:
+      kind: maintenance
+      summary: "Apply kernel patch and rotate runner credentials"
+      author_id: user-alice
+      ticket_id: doc-ticket-ci-maint-701
+  - action: create_edge
+    from_id: change-ci-maintenance-701
+    to_id: workload-ci
+    rel_type: TOUCHED
+    provenance: configured
+    source: maintenance-cron
+  - action: create_edge
+    from_id: doc-ticket-ci-maint-701
+    to_id: workload-ci
+    rel_type: ABOUT
+    provenance: configured
+    source: jira
+
+telemetry: []
+
+alert:
+  id: alert-pair7-convergence-crown-jewel
+  title: "Suspicious pod activity in vicinity of sensitive resources"
+  kind: multi_path_convergence
+  severity: critical
+  status: new
+  target_id: pod-ci-1
+  target_label: Pod
+  at_offset: 10
+  details:
+    pod_id: "pod-ci-1"
+    workload: "ci-runner"
+    target_resource: "sr-cloud-iam"
+
+ground_truth:
+  verdict: benign
+  rationale: "Pod access is isolated to scheduled maintenance window with no convergence to rogue agent sessions or dual-path compromise."
+  required_evidence:
+    - change-ci-maintenance-701
+    - pod-ci-1
+  correct_actions:
+    - dismiss_alert

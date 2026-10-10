@@ -1,0 +1,71 @@
+id: pair4_dormant_permission_malicious
+pair_id: pair4_dormant_permission
+variant: malicious
+title: "Abuse of Forgotten Wildcard Permission by Compromised Billing Pod"
+description: "A dormant wildcard permission forgotten from a past deployment is exploited by an unauthorized script on pod-billing-2 to access payment records."
+inject: false
+
+mutations:
+  - action: create_node
+    label: Permission
+    id: perm-wildcard-cluster
+    properties:
+      verb: "*"
+      resource: "*"
+      scope: cluster
+  - action: create_edge
+    from_id: sa-billing
+    to_id: perm-wildcard-cluster
+    rel_type: HAS_PERMISSION
+    valid_from: 1700000000
+    valid_to: null
+    provenance: configured
+    source: rbac
+  - action: create_edge
+    from_id: pod-billing-2
+    to_id: sr-payment-db
+    rel_type: CAN_ACCESS
+    provenance: observed
+    source: runtime-ebpf
+
+telemetry:
+  - ts_offset: 5
+    pod_id: pod-billing-2
+    pid: 3012
+    ppid: 1
+    binary: /tmp/pwn_script.sh
+    args: ["--dump-all-secrets"]
+    kind: exec
+  - ts_offset: 10
+    pod_id: pod-billing-2
+    pid: 3013
+    ppid: 3012
+    binary: /usr/bin/curl
+    args: ["--header", "Authorization: Bearer sa-billing-token", "https://vault.internal/api/v1/payments"]
+    kind: connect
+    dest: "sr-payment-db"
+
+alert:
+  id: alert-pair4-dormant-permission
+  title: "Dormant broad permission exercised by billing-api service account"
+  kind: dormant_privilege_abuse
+  severity: high
+  status: new
+  target_id: sa-billing
+  target_label: ServiceAccount
+  at_offset: 15
+  details:
+    service_account: "sa-billing"
+    permission: "perm-wildcard-cluster"
+    dormant_days: 45
+
+ground_truth:
+  verdict: malicious
+  rationale: "Unmanaged dormant wildcard permission abused by unauthorized script on pod-billing-2 to access payment records without documentation or runbook."
+  required_evidence:
+    - sa-billing
+    - perm-wildcard-cluster
+    - sr-payment-db
+  correct_actions:
+    - isolate_pod
+    - revoke_permission

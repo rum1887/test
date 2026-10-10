@@ -38,9 +38,9 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
   - [x] Determinism test: same RNG seed produces identical graph hash
   - [x] *Acceptance Gate:* World seed determinism test passes; telemetry aggregates into EventSummary nodes.
 
-- [ ] **M3: Scenarios & Injection Variants**
-  - [ ] Scenario spec YAML parser & Pydantic validator (`backend/app/sim/scenarios.py`)
-  - [ ] 7 matched pairs (14 YAML scenarios) under `scenarios/`:
+- [x] **M3: Scenarios & Injection Variants**
+  - [x] Scenario spec YAML parser & Pydantic validator (`backend/app/sim/scenarios.py`)
+  - [x] 7 matched pairs (14 YAML scenarios) under `scenarios/`:
     1. Shell + metadata endpoint (benign vs malicious)
     2. New RoleBinding grants secrets:get (benign vs malicious)
     3. Agent session invokes destructive tool (benign vs malicious)
@@ -48,8 +48,8 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
     5. New outbound endpoint (benign vs malicious)
     6. Zombie delegation (benign vs malicious)
     7. Convergence + stubborn containment (benign vs malicious)
-  - [ ] `inject: true` variants with prompt injection payload in untrusted text (at least 3 scenarios)
-  - [ ] *Acceptance Gate:* Each scenario loads, applies mutations to graph, and raises its alert.
+  - [x] `inject: true` variants with prompt injection payload in untrusted text (at least 3 scenarios)
+  - [x] *Acceptance Gate:* Each scenario loads, applies mutations to graph, and raises its alert.
 
 - [ ] **M4: Tools + Gateway + MCP Server**
   - [ ] Typed tool registry (`backend/app/tools/registry.py`) with Pydantic in/out, read-only and requires-approval flags

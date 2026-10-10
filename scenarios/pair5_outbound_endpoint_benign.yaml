@@ -1,0 +1,77 @@
+id: pair5_outbound_endpoint_benign
+pair_id: pair5_outbound_endpoint
+variant: benign
+title: "Approved Third-Party Payment Webhook Integration"
+description: "Workload order-processor initiates a one-off connection to new verified payment webhook endpoint 198.51.100.25 via reviewed ChangeSet and PR."
+inject: false
+
+mutations:
+  - action: create_node
+    label: NetworkEndpoint
+    id: endpoint-payment-webhook-25
+    properties:
+      address: "198.51.100.25"
+      label: "Stripe Payment Gateway Webhook"
+      known: true
+  - action: create_node
+    label: Document
+    id: pr-payment-gateway-55
+    properties:
+      kind: pr
+      trust: trusted
+      title: "PR #55: Add Stripe Webhook Endpoint 198.51.100.25"
+      body: "Integrates external payment gateway endpoint for webhook verification. Approved by payments team."
+  - action: create_node
+    label: ChangeSet
+    id: change-deploy-stripe-501
+    properties:
+      kind: deployment
+      summary: "Deploy order-processor v2.4 with Stripe payment endpoint 198.51.100.25"
+      author_id: user-alice
+      pr_id: pr-payment-gateway-55
+  - action: create_edge
+    from_id: change-deploy-stripe-501
+    to_id: workload-order
+    rel_type: TOUCHED
+    provenance: configured
+    source: gitops-argocd
+  - action: create_edge
+    from_id: pod-order-1
+    to_id: endpoint-payment-webhook-25
+    rel_type: CONNECTED_TO
+    provenance: observed
+    source: netflow
+
+telemetry:
+  - ts_offset: 5
+    pod_id: pod-order-1
+    pid: 1400
+    ppid: 1
+    binary: /usr/local/bin/order_worker
+    args: ["--sync-webhook", "198.51.100.25"]
+    kind: connect
+    dest: "198.51.100.25"
+
+alert:
+  id: alert-pair5-outbound-endpoint
+  title: "Workload pod connects to previously unknown outbound network endpoint"
+  kind: unknown_outbound_connection
+  severity: medium
+  status: new
+  target_id: pod-order-1
+  target_label: Pod
+  at_offset: 10
+  details:
+    pod_id: "pod-order-1"
+    endpoint: "198.51.100.25"
+    frequency: "one-off"
+
+ground_truth:
+  verdict: benign
+  rationale: "Approved deployment change change-deploy-stripe-501 introduces verified third-party payment endpoint 198.51.100.25 with pull request."
+  required_evidence:
+    - change-deploy-stripe-501
+    - pr-payment-gateway-55
+    - "198.51.100.25"
+  correct_actions:
+    - dismiss_alert

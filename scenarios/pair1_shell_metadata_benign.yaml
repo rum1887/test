@@ -1,0 +1,96 @@
+id: pair1_shell_metadata_benign
+pair_id: pair1_shell_metadata
+variant: benign
+title: "Approved Interactive Debugging in Checkout Service"
+description: "An engineer conducts authorized debugging on pod-checkout-1, invoking /bin/sh and querying metadata IP with valid ticket."
+inject: false
+
+mutations:
+  - action: create_node
+    label: Document
+    id: doc-ticket-debug-101
+    properties:
+      kind: ticket
+      trust: trusted
+      title: "INC-8812: Checkout latency spike debug"
+      body: "Authorized live debugging session on pod-checkout-1 by Alice to inspect network latency and IMDS config."
+  - action: create_node
+    label: Document
+    id: doc-audit-exec-101
+    properties:
+      kind: audit
+      trust: trusted
+      title: "Audit Log: kubectl exec session on pod-checkout-1"
+      body: "Engineer Alice (user-alice) authenticated via SSO and started kubectl exec session."
+  - action: create_node
+    label: Baseline
+    id: baseline-checkout-debug
+    properties:
+      category: approved_exec
+      summary: "Approved developer exec sessions occur biweekly on checkout pods during scheduled maintenance windows."
+  - action: create_edge
+    from_id: doc-ticket-debug-101
+    to_id: pod-checkout-1
+    rel_type: ABOUT
+    provenance: configured
+    source: jira
+  - action: create_edge
+    from_id: doc-audit-exec-101
+    to_id: pod-checkout-1
+    rel_type: ABOUT
+    provenance: observed
+    source: k8s-audit
+  - action: create_edge
+    from_id: baseline-checkout-debug
+    to_id: workload-checkout
+    rel_type: DESCRIBES
+    provenance: inferred
+    source: baseline-analyzer
+
+telemetry:
+  - ts_offset: 10
+    pod_id: pod-checkout-1
+    pid: 1001
+    ppid: 1
+    binary: /usr/bin/kubectl-exec
+    args: ["pod-checkout-1", "/bin/sh"]
+    kind: exec
+  - ts_offset: 20
+    pod_id: pod-checkout-1
+    pid: 1002
+    ppid: 1001
+    binary: /bin/sh
+    args: ["-i"]
+    kind: exec
+  - ts_offset: 30
+    pod_id: pod-checkout-1
+    pid: 1003
+    ppid: 1002
+    binary: /usr/bin/curl
+    args: ["http://169.254.169.254/latest/meta-data/"]
+    kind: connect
+    dest: "169.254.169.254"
+
+alert:
+  id: alert-pair1-shell-metadata
+  title: "Interactive shell spawned querying cloud metadata IP 169.254.169.254"
+  kind: imds_access
+  severity: high
+  status: new
+  target_id: pod-checkout-1
+  target_label: Pod
+  at_offset: 35
+  details:
+    binary: "/bin/sh"
+    endpoint: "169.254.169.254"
+    workload: "checkout-service"
+
+ground_truth:
+  verdict: benign
+  rationale: "Parent process is an authenticated kubectl exec session by active engineer Alice with authorized debug ticket doc-ticket-debug-101 and matching baseline."
+  required_evidence:
+    - doc-ticket-debug-101
+    - doc-audit-exec-101
+    - user-alice
+  correct_actions:
+    - dismiss_alert

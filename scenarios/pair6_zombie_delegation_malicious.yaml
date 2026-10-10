@@ -1,0 +1,35 @@
+id: pair6_zombie_delegation_malicious
+pair_id: pair6_zombie_delegation
+variant: malicious
+title: "Active Wildcard Delegation Exploited After Admin Offboarding"
+description: "Offboarded admin Eve's broad wildcard delegation remains unrevoked and is actively exercised by an agent session."
+inject: false
+
+mutations: []
+
+telemetry: []
+
+alert:
+  id: alert-pair6-zombie-delegation
+  title: "AgentSession active under delegation whose principal status recently changed"
+  kind: zombie_delegation
+  severity: high
+  status: new
+  target_id: sess-zombie
+  target_label: AgentSession
+  at_offset: 10
+  details:
+    session_id: "sess-zombie"
+    principal: "user-offboarded"
+    principal_status: "offboarded"
+
+ground_truth:
+  verdict: malicious
+  rationale: "Active wildcard delegation used by session belonging to offboarded administrator Eve with no grace window or valid ticket."
+  required_evidence:
+    - user-offboarded
+    - del-zombie
+    - sess-zombie
+  correct_actions:
+    - revoke_delegation
+    - kill_session

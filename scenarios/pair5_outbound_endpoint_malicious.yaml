@@ -1,0 +1,86 @@
+id: pair5_outbound_endpoint_malicious
+pair_id: pair5_outbound_endpoint
+variant: malicious
+title: "Undocumented C2 Beaconing Across Multiple Workload Pods"
+description: "Periodic beaconing connections to unknown external IP 203.0.113.88 detected across multiple pods with no change record or deployment."
+inject: false
+
+mutations:
+  - action: create_node
+    label: NetworkEndpoint
+    id: endpoint-c2-beacon-88
+    properties:
+      address: "203.0.113.88"
+      label: "suspicious-external-host"
+      known: false
+  - action: create_edge
+    from_id: pod-order-1
+    to_id: endpoint-c2-beacon-88
+    rel_type: CONNECTED_TO
+    provenance: observed
+    source: netflow
+  - action: create_edge
+    from_id: pod-frontend-1
+    to_id: endpoint-c2-beacon-88
+    rel_type: CONNECTED_TO
+    provenance: observed
+    source: netflow
+
+telemetry:
+  - ts_offset: 10
+    pod_id: pod-order-1
+    pid: 1405
+    ppid: 1
+    binary: /tmp/.beacon
+    args: ["--connect", "203.0.113.88:4444"]
+    kind: connect
+    dest: "203.0.113.88"
+  - ts_offset: 70
+    pod_id: pod-order-1
+    pid: 1405
+    ppid: 1
+    binary: /tmp/.beacon
+    args: ["--connect", "203.0.113.88:4444"]
+    kind: connect
+    dest: "203.0.113.88"
+  - ts_offset: 20
+    pod_id: pod-frontend-1
+    pid: 1205
+    ppid: 1
+    binary: /tmp/.beacon
+    args: ["--connect", "203.0.113.88:4444"]
+    kind: connect
+    dest: "203.0.113.88"
+  - ts_offset: 80
+    pod_id: pod-frontend-1
+    pid: 1205
+    ppid: 1
+    binary: /tmp/.beacon
+    args: ["--connect", "203.0.113.88:4444"]
+    kind: connect
+    dest: "203.0.113.88"
+
+alert:
+  id: alert-pair5-outbound-endpoint
+  title: "Workload pod connects to previously unknown outbound network endpoint"
+  kind: unknown_outbound_connection
+  severity: medium
+  status: new
+  target_id: pod-order-1
+  target_label: Pod
+  at_offset: 90
+  details:
+    pod_id: "pod-order-1"
+    endpoint: "203.0.113.88"
+    frequency: "periodic_beacon"
+
+ground_truth:
+  verdict: malicious
+  rationale: "Undocumented periodic beaconing to unknown external IP 203.0.113.88 observed across multiple pods with no change record."
+  required_evidence:
+    - pod-order-1
+    - pod-frontend-1
+    - "203.0.113.88"
+  correct_actions:
+    - isolate_pod
+    - block_endpoint

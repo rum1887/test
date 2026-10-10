@@ -1,0 +1,84 @@
+id: pair4_dormant_permission_benign
+pair_id: pair4_dormant_permission
+variant: benign
+title: "Documented Break-Glass Permission for Billing API"
+description: "A dormant wildcard permission on sa-billing is documented as an approved break-glass recovery role with named owner Alice and runbook."
+inject: false
+
+mutations:
+  - action: create_node
+    label: Document
+    id: doc-runbook-breakglass-401
+    properties:
+      kind: runbook
+      trust: trusted
+      title: "RUNBOOK-014: Billing API Disaster Recovery Break-Glass Procedures"
+      body: "Outlines emergency recovery procedure using perm-wildcard-cluster. Primary on-call owner: user-alice."
+  - action: create_node
+    label: Document
+    id: doc-ticket-disaster-dr-401
+    properties:
+      kind: ticket
+      trust: trusted
+      title: "OPS-772: Annual Billing DR Drill"
+      body: "Quarterly dry-run testing billing recovery procedures using break-glass permissions."
+  - action: create_node
+    label: Permission
+    id: perm-wildcard-cluster
+    properties:
+      verb: "*"
+      resource: "*"
+      scope: cluster
+  - action: create_edge
+    from_id: sa-billing
+    to_id: perm-wildcard-cluster
+    rel_type: HAS_PERMISSION
+    valid_from: 1700000000
+    valid_to: null
+    provenance: configured
+    source: rbac
+  - action: create_edge
+    from_id: doc-runbook-breakglass-401
+    to_id: sa-billing
+    rel_type: ABOUT
+    provenance: configured
+    source: wiki
+  - action: create_edge
+    from_id: doc-ticket-disaster-dr-401
+    to_id: sa-billing
+    rel_type: ABOUT
+    provenance: configured
+    source: jira
+
+telemetry:
+  - ts_offset: 5
+    pod_id: pod-billing-1
+    pid: 2100
+    ppid: 1
+    binary: /usr/local/bin/dr_verify.sh
+    args: ["--dry-run"]
+    kind: exec
+
+alert:
+  id: alert-pair4-dormant-permission
+  title: "Dormant broad permission exercised by billing-api service account"
+  kind: dormant_privilege_abuse
+  severity: high
+  status: new
+  target_id: sa-billing
+  target_label: ServiceAccount
+  at_offset: 15
+  details:
+    service_account: "sa-billing"
+    permission: "perm-wildcard-cluster"
+    dormant_days: 45
+
+ground_truth:
+  verdict: benign
+  rationale: "Documented break-glass role with active runbook doc-runbook-breakglass-401 and authorized DR drill ticket."
+  required_evidence:
+    - doc-runbook-breakglass-401
+    - doc-ticket-disaster-dr-401
+    - sa-billing
+  correct_actions:
+    - dismiss_alert

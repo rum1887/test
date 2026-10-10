@@ -1,0 +1,54 @@
+id: pair7_convergence_stubborn_malicious
+pair_id: pair7_convergence_stubborn
+variant: malicious
+title: "Multi-Path Convergence on Crown Jewel Secrets with Stubborn Exposure"
+description: "Compromised pod-ci-1 and rogue agent session sess-bob-data converge on cloud-iam-secrets; single-point pod isolation leaves attack path open, requiring escalation to session revocation."
+inject: false
+
+mutations:
+  - action: create_edge
+    from_id: pod-ci-1
+    to_id: sr-cloud-iam
+    rel_type: CAN_ACCESS
+    provenance: observed
+    source: runtime-ebpf
+  - action: create_edge
+    from_id: sess-bob-data
+    to_id: sr-cloud-iam
+    rel_type: CAN_ACCESS
+    provenance: observed
+    source: agent-audit
+
+telemetry:
+  - ts_offset: 5
+    pod_id: pod-ci-1
+    pid: 5010
+    ppid: 1
+    binary: /tmp/harvest_iam
+    args: ["--target", "cloud-iam-secrets"]
+    kind: exec
+
+alert:
+  id: alert-pair7-convergence-crown-jewel
+  title: "Suspicious pod activity in vicinity of sensitive resources"
+  kind: multi_path_convergence
+  severity: critical
+  status: new
+  target_id: pod-ci-1
+  target_label: Pod
+  at_offset: 15
+  details:
+    pod_id: "pod-ci-1"
+    workload: "ci-runner"
+    target_resource: "sr-cloud-iam"
+
+ground_truth:
+  verdict: malicious
+  rationale: "Compromised pod-ci-1 and rogue agent session converge on cloud-iam-secrets. Single-point pod isolation leaves attack path open; full containment requires dual remediation (pod isolation + session revocation)."
+  required_evidence:
+    - pod-ci-1
+    - sess-bob-data
+    - sr-cloud-iam
+  correct_actions:
+    - isolate_pod
+    - revoke_session
