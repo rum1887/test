@@ -426,3 +426,39 @@ def centrality_rank(
     LIMIT 15
     """
     return client.query_dicts(cypher)
+
+
+def shortest_path(
+    client: GraphClient,
+    start_id: str,
+    target_id: str,
+    at: int | None = None,
+) -> dict[str, Any]:
+    """
+    Query: shortest_path
+    Finds the shortest directed connection path between two nodes.
+
+    Parameters:
+      - start_id (str): Source node identifier.
+      - target_id (str): Destination node identifier.
+      - at (int | None): Temporal snapshot filter.
+    """
+    cypher = """
+    MATCH (start {id: $start_id}), (target {id: $target_id})
+    MATCH path = shortestPath((start)-[*1..8]->(target))
+    RETURN
+        [n IN nodes(path) | n.id] AS node_ids,
+        [r IN relationships(path) | type(r)] AS edge_types,
+        length(path) AS length
+    """
+    rows = client.query_dicts(cypher, {"start_id": start_id, "target_id": target_id})
+    if not rows:
+        return {"found": False, "node_ids": [], "edge_types": [], "length": 0}
+
+    row = rows[0]
+    return {
+        "found": True,
+        "node_ids": row.get("node_ids", []),
+        "edge_types": row.get("edge_types", []),
+        "length": row.get("length", 0),
+    }

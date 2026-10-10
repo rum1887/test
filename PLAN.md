@@ -51,13 +51,13 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
   - [x] `inject: true` variants with prompt injection payload in untrusted text (at least 3 scenarios)
   - [x] *Acceptance Gate:* Each scenario loads, applies mutations to graph, and raises its alert.
 
-- [ ] **M4: Tools + Gateway + MCP Server**
-  - [ ] Typed tool registry (`backend/app/tools/registry.py`) with Pydantic in/out, read-only and requires-approval flags
-  - [ ] Graph tools (`graph_tools.py`), Telemetry tools (`telemetry_tools.py`), Context tools (`context_tools.py`), Memory tools (`memory_tools.py`), Control tools (`control_tools.py`), Action tools (`action_tools.py`)
-  - [ ] MCP Server (`backend/app/tools/mcp_server.py`) exposing identical registry
-  - [ ] Deterministic policy gateway (`backend/app/agent/gateway.py`): fail-closed checks for session, unexpired delegation, scopes, budgets
-  - [ ] Audit logging via `ToolCall` graph nodes
-  - [ ] *Acceptance Gate:* Tool tests pass; MCP server lists registered tools; gateway denies unauthorized actions.
+- [x] **M4: Tools + Gateway + MCP Server**
+  - [x] Typed tool registry (`backend/app/tools/registry.py`) with Pydantic in/out, read-only and requires-approval flags
+  - [x] Graph tools (`graph_tools.py`), Telemetry tools (`telemetry_tools.py`), Context tools (`context_tools.py`), Memory tools (`memory_tools.py`), Control tools (`control_tools.py`), Action tools (`action_tools.py`)
+  - [x] MCP Server (`backend/app/tools/mcp_server.py`) exposing identical registry
+  - [x] Deterministic policy gateway (`backend/app/agent/gateway.py`): fail-closed checks for session, unexpired delegation, scopes, budgets
+  - [x] Audit logging via `ToolCall` graph nodes
+  - [x] *Acceptance Gate:* Tool tests pass; MCP server lists registered tools; gateway denies unauthorized actions.
 
 - [ ] **M5: LLM Layer & Record/Replay**
   - [ ] Anthropic client wrapper (`backend/app/agent/llm.py`) with `claude-sonnet-5-5` (or latest supported Anthropic model)
