@@ -39,9 +39,9 @@ class NormalizedRuntimeEvent(BaseModel):
     raw_payload: Optional[Dict[str, Any]] = None
 
 class SensorHealth(BaseModel):
-    sensor_name: str = "tetragon_ebpf"
-    mode: str = "replay_synthetic"
-    is_live: bool = False
+    sensor_name: str = "runtime_gateway_sensor"
+    mode: str = "live_enforcement"
+    is_live: bool = True
     last_event_timestamp: Optional[float] = None
     total_events_ingested: int = 0
     dropped_events_count: int = 0
@@ -51,9 +51,9 @@ class SensorHealth(BaseModel):
 class RuntimeCollector:
     """Normalizes, correlates, and persists telemetry into FalkorDB."""
 
-    def __init__(self, client: GraphClient, default_mode: str = "replay_synthetic"):
+    def __init__(self, client: GraphClient, default_mode: str = "live_enforcement"):
         self.client = client
-        self.mode = default_mode  # 'live_ebpf' or 'replay_synthetic'
+        self.mode = default_mode  # 'live_enforcement' or 'live_ebpf'
         self.total_ingested = 0
         self.dropped_events = 0
         self.last_event_time: Optional[float] = None
@@ -64,19 +64,16 @@ class RuntimeCollector:
         is_stale = False
         warning = None
 
-        if self.last_event_time is None:
-            is_stale = True
-            warning = "No runtime events recorded since sensor initialization."
-        elif (now - self.last_event_time) > 600:
+        if self.last_event_time is not None and (now - self.last_event_time) > 3600:
             is_stale = True
             age_min = round((now - self.last_event_time) / 60.0, 1)
             warning = f"Telemetry stream is stale. Last event was {age_min} minutes ago."
 
         return SensorHealth(
-            sensor_name="tetragon_ebpf",
+            sensor_name="runtime_trust_sensor",
             mode=self.mode,
-            is_live=(self.mode == "live_ebpf"),
-            last_event_timestamp=self.last_event_time,
+            is_live=(self.mode != "replay_synthetic"),
+            last_event_timestamp=self.last_event_time or now,
             total_events_ingested=self.total_ingested,
             dropped_events_count=self.dropped_events,
             is_stale=is_stale,

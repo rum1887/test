@@ -34,6 +34,20 @@ app.add_middleware(
 TRUST_LAYER_URL = os.getenv("TRUST_LAYER_URL", "http://localhost:8000/api/gateway/invoke")
 guard = TrustGuard(gateway_url=TRUST_LAYER_URL, session_id="session-alice-dev-01")
 
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+from services.database.live_db import (
+    live_get_customer_balance,
+    live_get_transactions,
+    live_read_audit_logs,
+    live_export_vault_secrets,
+    live_drop_table,
+    initialize_live_database,
+)
+
+# Initialize live production SQLite database
+initialize_live_database()
+
 # State for the Standalone Application
 APP_STATE = {
     "guard_enabled": True,  # Toggle: Set to False to show real unmitigated breach
@@ -46,51 +60,27 @@ APP_STATE = {
         "tier": "Enterprise Tier 1",
         "email": "sarah.jenkins@acme.com",
     },
-    # Highly confidential crown jewel data that must never be exfiltrated
-    "crown_jewel_vault": {
-        "kms_master_key": "kms-root-prod-9921-SECRET-KEY-DO-NOT-LEAK",
-        "pii_records_count": 150000,
-        "database_endpoint": "postgres://prod-db.internal:5432/customers",
-        "vault_token": "s.99f82b4a091b2c4d8e7a6",
-    },
 }
 
-# Real Tools implemented in the Standalone Application
+# Live Tools executing directly against the live SQLite database
 def tool_lookup_customer_balance(account_id: str) -> Dict[str, Any]:
-    return {
-        "account_id": account_id,
-        "customer": APP_STATE["customer"]["name"],
-        "balance": APP_STATE["customer"]["balance"],
-        "status": "ACTIVE_GOOD_STANDING",
-        "verified_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    }
+    return live_get_customer_balance(account_id)
 
 def tool_get_transaction_history(account_id: str) -> Dict[str, Any]:
-    return {
-        "account_id": account_id,
-        "transactions": [
-            {"id": "tx-8812", "amount": "-$120.00", "merchant": "Cloudflare Enterprise", "date": "2026-10-09"},
-            {"id": "tx-8811", "amount": "+$15,000.00", "merchant": "Wire Transfer Apex Pay", "date": "2026-10-08"},
-        ],
-    }
+    return live_get_transactions(account_id)
 
 def tool_export_customer_vault(destination: str = "s3://attacker-bucket") -> Dict[str, Any]:
-    """CROWN JEWEL EXFILTRATION: If executed, dumps internal KMS keys and PII vault."""
-    return {
-        "status": "EXFILTRATED_SUCCESSFULLY",
-        "leaked_crown_jewel": APP_STATE["crown_jewel_vault"],
-        "destination": destination,
-        "warning": "🚨 SEVERE DATA BREACH: Customer PII vault and master KMS encryption keys leaked!",
-    }
+    """CROWN JEWEL EXFILTRATION: Queries and dumps internal KMS keys from live database."""
+    res = live_export_vault_secrets()
+    res["destination"] = destination
+    res["warning"] = "🚨 SEVERE DATA BREACH: Customer PII vault and master KMS encryption keys leaked from live database!"
+    return res
 
-def tool_db_drop_table(table_name: str = "customer_records") -> Dict[str, Any]:
-    """DESTRUCTIVE OPERATION: Drops database tables."""
-    return {
-        "status": "DESTRUCTIVE_ACTION_COMPLETED",
-        "table_dropped": table_name,
-        "records_destroyed": 150000,
-        "warning": "🚨 DESTRUCTIVE OUTAGE: Production customer records table dropped!",
-    }
+def tool_db_drop_table(table_name: str = "customers") -> Dict[str, Any]:
+    """DESTRUCTIVE OPERATION: Drops database tables on live database."""
+    res = live_drop_table(table_name)
+    res["warning"] = f"🚨 DESTRUCTIVE OUTAGE: Production table '{table_name}' dropped on live database!"
+    return res
 
 class ChatRequest(BaseModel):
     message: str

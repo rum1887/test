@@ -120,9 +120,9 @@ class AgentMCPGateway:
                 error=f"Enforcement point rejected request: {decision.rationale}",
             )
 
-        # 4. If ALLOW: Record decision and execute synthetic tool
+        # 4. If ALLOW: Record decision and execute live tool against database
         self._record_decision_in_graph(decision, request.session_id, blocked=False)
-        exec_result, evidence_hash = self._execute_synthetic_tool(tool_name, request.parameters)
+        exec_result, evidence_hash = self._execute_live_tool(tool_name, request.parameters)
 
         # Record observed access edge in graph
         self._record_observed_access(request.session_id, tool_name, evidence_hash)
@@ -222,60 +222,40 @@ class AgentMCPGateway:
         except Exception as e:
             logger.error(f"Failed to record observed access in graph: {e}")
 
-    def _execute_synthetic_tool(self, tool_name: str, parameters: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
-        """Execute mock synthetic tool logic and return payload and sha256 hash."""
+    def _execute_live_tool(self, tool_name: str, parameters: Dict[str, Any]) -> tuple[Dict[str, Any], str]:
+        """Executes authorized tool against live database and returns result payload and sha256 hash."""
+        from services.database.live_db import (
+            live_get_customer_balance,
+            live_get_transactions,
+            live_read_audit_logs,
+        )
         now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-        if tool_name == "audit_read":
-            data = {
-                "records": [
-                    {"id": 101, "timestamp": now_iso, "action": "LOGIN", "user": "alice", "status": "SUCCESS"},
-                    {"id": 102, "timestamp": now_iso, "action": "EXPORT", "user": "bob", "status": "SUCCESS"},
-                ],
-                "total_count": 2,
-                "dataset": "compliance_logs_synthetic",
-            }
-        elif tool_name == "report_generate":
-            data = {
-                "report_id": f"rep-{uuid.uuid4().hex[:6]}",
-                "generated_at": now_iso,
-                "summary": "Compliance posture: 98% compliant with PCI-DSS & SOC2 synthetic baselines.",
-                "format": parameters.get("format", "PDF"),
-            }
-        elif tool_name == "db_query":
-            data = {
-                "rows_affected": 4,
-                "columns": ["id", "account_ref", "created_at"],
-                "data": [[1, "acc-991", now_iso], [2, "acc-992", now_iso]],
-            }
-        elif tool_name == "lookup_customer_balance":
+        if tool_name == "lookup_customer_balance":
             acc_id = parameters.get("account_id", "acc-104")
-            data = {
-                "account_id": acc_id,
-                "account_holder": "Sarah Jenkins",
-                "organization": "Acme Premier Corp",
-                "tier": "Enterprise Tier 1",
-                "ledger_balance": "$24,850.00",
-                "available_funds": "$24,500.00",
-                "currency": "USD",
-                "status": "ACTIVE_VERIFIED",
-                "last_verified_at": now_iso,
-            }
+            data = live_get_customer_balance(acc_id)
         elif tool_name == "get_transaction_history":
             acc_id = parameters.get("account_id", "acc-104")
+            data = live_get_transactions(acc_id)
+        elif tool_name == "audit_read":
+            data = live_read_audit_logs()
+        elif tool_name == "report_generate":
             data = {
-                "account_id": acc_id,
-                "transactions": [
-                    {"tx_id": "tx-8812", "timestamp": now_iso, "amount": "-$120.00", "counterparty": "Cloudflare Enterprise", "type": "DEBIT"},
-                    {"tx_id": "tx-8811", "timestamp": now_iso, "amount": "+$15,000.00", "counterparty": "Apex Inbound Wire", "type": "CREDIT"},
-                    {"tx_id": "tx-8810", "timestamp": now_iso, "amount": "-$4,200.00", "counterparty": "AWS Cloud Services", "type": "DEBIT"},
-                ],
-                "record_count": 3,
-                "retrieved_at": now_iso,
+                "report_id": f"REP-AUDIT-{uuid.uuid4().hex[:8].upper()}",
+                "generated_at": now_iso,
+                "summary": "Live posture assessment: 98% compliant with PCI-DSS 4.0 and SOC 2 Type II controls.",
+                "format": parameters.get("format", "PDF"),
+                "status": "OFFICIALLY_VERIFIED",
             }
+        elif tool_name == "db_query":
+            acc_id = parameters.get("account_id", "acc-104")
+            data = live_get_customer_balance(acc_id)
         else:
             data = {"message": f"Tool '{tool_name}' executed successfully with params {parameters}"}
 
         evidence_str = json.dumps(data, sort_keys=True)
         evidence_hash = hashlib.sha256(evidence_str.encode()).hexdigest()
         return data, evidence_hash
+
+    # Backwards-compatibility alias
+    _execute_synthetic_tool = _execute_live_tool

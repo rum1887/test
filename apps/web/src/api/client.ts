@@ -16,7 +16,7 @@ export interface HealthResponse {
   };
   sensor: {
     sensor_name: string;
-    mode: 'live_ebpf' | 'replay_synthetic';
+    mode: 'live_ebpf' | 'live_enforcement' | string;
     is_live: boolean;
     last_event_timestamp: number | null;
     total_events_ingested: number;

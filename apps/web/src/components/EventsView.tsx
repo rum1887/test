@@ -54,21 +54,12 @@ export const EventsView: React.FC = () => {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={handleInjectReplay}
-            disabled={injecting}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-sky-950 hover:bg-sky-900 border border-sky-800 text-sky-300 rounded text-xs font-semibold transition cursor-pointer disabled:opacity-50"
-          >
-            <Play className="w-3 h-3 fill-sky-400" />
-            <span>{injecting ? 'Injecting...' : 'Inject Replay Telemetry'}</span>
-          </button>
-
-          <button
             onClick={loadEvents}
             disabled={loading}
-            className="p-1.5 bg-[#0d1322] border border-[#1e2942] text-slate-300 hover:text-white rounded transition"
-            title="Refresh Events"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-sky-950 hover:bg-sky-900 border border-sky-800 text-sky-300 rounded text-xs font-semibold transition cursor-pointer"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh Live Stream</span>
           </button>
         </div>
       </div>
@@ -95,8 +86,8 @@ export const EventsView: React.FC = () => {
         <div className="h-4 w-[1px] bg-[#1e2942] mx-2 hidden sm:block" />
 
         <div className="flex items-center space-x-2">
-          <span className="text-slate-400">Mode:</span>
-          {['ALL', 'live_ebpf', 'replay_synthetic'].map((m) => (
+          <span className="text-slate-400">Telemetry Source:</span>
+          {['ALL', 'live_ebpf', 'live_enforcement'].map((m) => (
             <button
               key={m}
               onClick={() => setModeFilter(m)}
@@ -106,7 +97,7 @@ export const EventsView: React.FC = () => {
                   : 'text-slate-400 hover:text-slate-200 bg-[#12192b]'
               }`}
             >
-              {m === 'live_ebpf' ? 'Live eBPF' : m === 'replay_synthetic' ? 'Replay' : 'All Modes'}
+              {m === 'live_ebpf' ? 'Kernel eBPF' : m === 'live_enforcement' ? 'Agent Gateway' : 'All Telemetry'}
             </button>
           ))}
         </div>
@@ -117,7 +108,7 @@ export const EventsView: React.FC = () => {
         <div className="divide-y divide-[#151f33]">
           {events.map((e) => {
             const isCritical = e.severity === 'CRITICAL';
-            const isLive = e.mode === 'live_ebpf';
+            const isLiveEbpf = e.mode === 'live_ebpf';
 
             return (
               <div key={e.id} className="p-4 space-y-2 hover:bg-[#121a2d] transition">
@@ -135,12 +126,12 @@ export const EventsView: React.FC = () => {
 
                     <span
                       className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                        isLive
+                        isLiveEbpf
                           ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                           : 'bg-sky-950 text-sky-300 border border-sky-800'
                       }`}
                     >
-                      {isLive ? 'LIVE eBPF' : 'SYNTHETIC REPLAY'}
+                      {isLiveEbpf ? 'KERNEL eBPF' : 'LIVE GATEWAY'}
                     </span>
 
                     <span className="font-mono text-xs font-semibold text-white">
