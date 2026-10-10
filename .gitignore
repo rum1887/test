@@ -23,3 +23,8 @@ apps/web/dist/
 
 # FalkorDB data
 falkordb_data/
+
+# Runtime telemetry & eval output
+telemetry.jsonl
+eval_output/
+

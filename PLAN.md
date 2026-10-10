@@ -31,12 +31,12 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
   - [x] Query doc generator script (`scripts/gen_query_docs.py`)
   - [x] *Acceptance Gate:* Query tests pass cleanly against FalkorDB.
 
-- [ ] **M2: Sim World + Clock + Telemetry**
-  - [ ] Simulated clock (`backend/app/sim/clock.py`): `now()`, `advance(seconds)`
-  - [ ] Deterministic world seeder (`backend/app/sim/world.py`): ~6 workloads, ~14 pods, service accounts, permissions, ~5 sensitive resources, ~12 endpoints, 4 principals, 2 agents, 4 sessions/delegations, MCP server with ~8 tools, ~40 documents, ~200 filler nodes
-  - [ ] Telemetry generator & aggregator (`backend/app/sim/telemetry.py`): Tetragon-like normalized events aggregated into `EventSummary` nodes; raw events in JSONL log; reaction to isolation
-  - [ ] Determinism test: same RNG seed produces identical graph hash
-  - [ ] *Acceptance Gate:* World seed determinism test passes; telemetry aggregates into EventSummary nodes.
+- [x] **M2: Sim World + Clock + Telemetry**
+  - [x] Simulated clock (`backend/app/sim/clock.py`): `now()`, `advance(seconds)`
+  - [x] Deterministic world seeder (`backend/app/sim/world.py`): ~6 workloads, ~14 pods, service accounts, permissions, ~5 sensitive resources, ~12 endpoints, 4 principals, 2 agents, 4 sessions/delegations, MCP server with ~8 tools, ~40 documents, ~200 filler nodes
+  - [x] Telemetry generator & aggregator (`backend/app/sim/telemetry.py`): Tetragon-like normalized events aggregated into `EventSummary` nodes; raw events in JSONL log; reaction to isolation
+  - [x] Determinism test: same RNG seed produces identical graph hash
+  - [x] *Acceptance Gate:* World seed determinism test passes; telemetry aggregates into EventSummary nodes.
 
 - [ ] **M3: Scenarios & Injection Variants**
   - [ ] Scenario spec YAML parser & Pydantic validator (`backend/app/sim/scenarios.py`)
