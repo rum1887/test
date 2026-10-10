@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
+import { TargetAppView } from './components/TargetAppView';
+import { OnboardingView } from './components/OnboardingView';
 import { OverviewView } from './components/OverviewView';
 import { GraphView } from './components/GraphView';
 import { WorkloadsView } from './components/WorkloadsView';
@@ -12,7 +14,7 @@ import { ComplianceView } from './components/ComplianceView';
 import { api, HealthResponse, StatsResponse, CytoscapeNode, CytoscapeEdge } from './api/client';
 
 export function App() {
-  const [currentTab, setCurrentTab] = useState<string>('overview');
+  const [currentTab, setCurrentTab] = useState<string>('target-app');
   const [currentScenario, setCurrentScenario] = useState<string>('B');
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [stats, setStats] = useState<StatsResponse | null>(null);
@@ -106,15 +108,11 @@ export function App() {
 
       {/* Main View Area */}
       <main className="flex-1">
-        {currentTab === 'overview' && (
-          <OverviewView
-            stats={stats}
-            health={health}
-            currentScenario={currentScenario}
-            onSelectScenario={handleLoadScenario}
-            onNavigate={(tab) => setCurrentTab(tab)}
-          />
+        {currentTab === 'target-app' && (
+          <TargetAppView onNavigateToGraph={() => setCurrentTab('graph')} />
         )}
+
+        {currentTab === 'onboarding' && <OnboardingView />}
 
         {currentTab === 'compliance' && <ComplianceView />}
 

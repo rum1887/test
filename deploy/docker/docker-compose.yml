@@ -33,6 +33,8 @@ services:
       - FALKORDB_PORT=6379
       - FALKORDB_GRAPH=runtime_trust_layer
       - RUNTIME_MODE=replay_synthetic
+    volumes:
+      - ../..:/app
     depends_on:
       falkordb:
         condition: service_healthy

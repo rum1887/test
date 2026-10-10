@@ -174,16 +174,48 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
         risk_level: 'CRITICAL',
         is_destructive: true
     }})
+    CREATE (tool_bal:Tool {{
+        id: 'tool-cust-balance',
+        name: 'lookup_customer_balance',
+        description: 'Lookup customer account balance and verified status',
+        required_permissions: ['customer_read'],
+        risk_level: 'LOW',
+        is_destructive: false
+    }})
+    CREATE (tool_tx:Tool {{
+        id: 'tool-cust-tx',
+        name: 'get_transaction_history',
+        description: 'Fetch recent customer ledger transactions',
+        required_permissions: ['customer_read'],
+        risk_level: 'LOW',
+        is_destructive: false
+    }})
+    CREATE (tool_vault:Tool {{
+        id: 'tool-vault-export',
+        name: 'export_customer_vault',
+        description: 'Dump encrypted customer PII keys and vault backups',
+        required_permissions: ['vault_admin_export'],
+        risk_level: 'CRITICAL',
+        is_destructive: true
+    }})
 
     CREATE (mcp_data)-[:CONTAINS]->(tool_audit)
     CREATE (mcp_data)-[:CONTAINS]->(tool_report)
     CREATE (mcp_data)-[:CONTAINS]->(tool_dbquery)
     CREATE (mcp_data)-[:CONTAINS]->(tool_drop)
+    CREATE (mcp_data)-[:CONTAINS]->(tool_bal)
+    CREATE (mcp_data)-[:CONTAINS]->(tool_tx)
+    CREATE (mcp_data)-[:CONTAINS]->(tool_vault)
 
     CREATE (tool_dbquery)-[:CAN_ACCESS]->(sr_paydb)
     CREATE (tool_drop)-[:CAN_ACCESS]->(sr_findb)
     CREATE (tool_drop)-[:PROTECTED_BY]->(pol_destructive)
     CREATE (tool_drop)-[:PROTECTED_BY]->(pol_delegation)
+    CREATE (tool_bal)-[:CAN_ACCESS]->(sr_paydb)
+    CREATE (tool_tx)-[:CAN_ACCESS]->(sr_findb)
+    CREATE (tool_vault)-[:CAN_ACCESS]->(sr_vault)
+    CREATE (tool_vault)-[:PROTECTED_BY]->(pol_destructive)
+    CREATE (tool_vault)-[:PROTECTED_BY]->(pol_delegation)
     """
     client.query(core_seed)
 
@@ -295,16 +327,18 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
     MATCH (tool_audit:Tool {{id: 'tool-audit-read'}})
     MATCH (tool_report:Tool {{id: 'tool-report-gen'}})
     MATCH (tool_drop:Tool {{id: 'tool-db-drop'}})
+    MATCH (tool_bal:Tool {{id: 'tool-cust-balance'}})
+    MATCH (tool_tx:Tool {{id: 'tool-cust-tx'}})
     MATCH (ep_mcp:EnforcementPoint {{id: 'ep-mcp-gateway-01'}})
     MATCH (pol_delegation:Policy {{id: 'pol-strict-delegation-bounds'}})
 
-    // Human Principal: Alice (Compliance Officer - Read Only)
+    // Human Principal: Alice (Compliance & Customer Ops Officer)
     CREATE (p_alice:Principal {{
         id: 'principal-alice',
         name: 'Alice Henderson',
         email: 'alice.henderson@example.com',
-        role: 'Compliance Officer',
-        department: 'Governance & Risk',
+        role: 'Operations & Compliance Lead',
+        department: 'Governance & Customer Ops',
         auth_provider: 'okta_oidc',
         status: 'ACTIVE',
         valid_from: {t_past_1h},
@@ -322,17 +356,24 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
         resource_pattern: 'compliance/*',
         effect: 'ALLOW'
     }})
+    CREATE (perm_cust_read:Permission {{
+        id: 'perm-alice-customer',
+        action: 'customer_read',
+        resource_pattern: 'customer/*',
+        effect: 'ALLOW'
+    }})
     CREATE (p_alice)-[:HAS_PERMISSION]->(perm_audit_read)
     CREATE (p_alice)-[:HAS_PERMISSION]->(perm_report_gen)
+    CREATE (p_alice)-[:HAS_PERMISSION]->(perm_cust_read)
 
-    // AI Agent: AutoDev Assistant
+    // AI Agent: AutoDev Assistant (Financial Ops & Governance Agent)
     CREATE (agent_autodev:Agent {{
         id: 'agent-autodev',
         name: 'AutoDev-Agent',
         model: 'gemini-2.5-pro',
         vendor: 'Google DeepMind',
-        description: 'Internal operations assistant agent',
-        capabilities: ['audit_read', 'report_generate', 'db_query', 'db_drop_table'],
+        description: 'Apex Financial operations & customer support agent',
+        capabilities: ['audit_read', 'report_generate', 'db_query', 'db_drop_table', 'lookup_customer_balance', 'get_transaction_history', 'export_customer_vault'],
         max_autonomy_level: 'RESTRICTED',
         status: 'ACTIVE'
     }})
@@ -355,7 +396,7 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
         principal_id: 'principal-alice',
         agent_id: 'agent-autodev',
         session_id: 'session-alice-dev-01',
-        scopes: ['audit_read', 'report_generate'],
+        scopes: ['audit_read', 'report_generate', 'lookup_customer_balance', 'get_transaction_history'],
         constraints: 'read_only_compliance',
         issued_at: {t_5m_ago},
         expires_at: {t_future_1h},
@@ -369,6 +410,8 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
     CREATE (del_alice)-[:DELEGATES_TO]->(agent_autodev)
     CREATE (s_alice)-[:CAN_INVOKE]->(tool_audit)
     CREATE (s_alice)-[:CAN_INVOKE]->(tool_report)
+    CREATE (s_alice)-[:CAN_INVOKE]->(tool_bal)
+    CREATE (s_alice)-[:CAN_INVOKE]->(tool_tx)
 
     // Deterministic Policy Decision: Blocked Tool Call
     CREATE (dec_block_drop:PolicyDecision {{

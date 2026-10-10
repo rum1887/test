@@ -5,9 +5,8 @@ import {
   RotateCcw,
   ShieldCheck,
   Building,
-  Play,
-  FileText,
-  SlidersHorizontal,
+  Zap,
+  Code2,
 } from 'lucide-react';
 import { HealthResponse } from '../api/client';
 
@@ -39,10 +38,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isHealthy = health?.database?.healthy ?? true;
 
   const navItems = [
-    { id: 'overview', label: 'Interactive Scenario Story', icon: Play },
-    { id: 'graph', label: 'Security Trust Graph', icon: Layers },
-    { id: 'containment', label: 'Containment & Remediation', icon: Shield },
-    { id: 'compliance', label: 'CISO Compliance & Audit', icon: ShieldCheck },
+    { id: 'target-app', label: '🎯 Target App & Live Attack', icon: Zap },
+    { id: 'graph', label: '🌐 Security Trust Graph', icon: Layers },
+    { id: 'onboarding', label: '🚀 Onboard Your Application', icon: Code2 },
+    { id: 'compliance', label: '🛡️ Audit & Compliance Log', icon: ShieldCheck },
   ];
 
   return (
@@ -71,34 +70,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Center: Practice & Demo Scenario Selector */}
-          <div className="flex items-center space-x-2 bg-[#0e162a] border border-[#1e2c4a] rounded-lg px-3 py-1.5 text-xs shadow-inner">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-            <span className="text-slate-400 font-medium hidden sm:inline">Active Demo Scenario:</span>
-            <select
-              value={currentScenario}
-              onChange={(e) => onSelectScenario(e.target.value)}
-              className="bg-transparent text-white font-semibold text-xs focus:outline-none cursor-pointer pr-1"
-            >
-              <option value="B" className="bg-[#0d1322] text-slate-100">
-                Scenario B: Rogue AI Agent Unauthorized Tool Call (Pitch Demo)
-              </option>
-              <option value="A" className="bg-[#0d1322] text-slate-100">
-                Scenario A: Kubernetes Pod Breach & eBPF Shell Interception
-              </option>
-              <option value="C" className="bg-[#0d1322] text-slate-100">
-                Scenario C: Multi-Vector Graph Convergence on AWS Root Secrets
-              </option>
-              <option value="ALL" className="bg-[#0d1322] text-slate-100">
-                All Scenarios (Full Infrastructure View)
-              </option>
-            </select>
+          {/* Center: Clean Active Application & Enforcement Badge */}
+          <div className="hidden md:flex items-center space-x-2.5 bg-[#0e162a] border border-[#1e2c4a] rounded-lg px-3.5 py-1.5 text-xs shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-slate-400 font-medium">Protected App:</span>
+            <span className="text-white font-semibold">Apex FinTech Banking Assistant</span>
+            <span className="text-slate-600">&bull;</span>
+            <span className="text-sky-400 font-mono text-[11px]">Pre-Execution Gateway Active</span>
           </div>
 
           {/* Right: Status, Reset, User Profile */}
           <div className="flex items-center space-x-3 shrink-0">
             {/* Connection Status Indicator */}
-            <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-[#10192e] border border-[#1b2a47] text-xs">
+            <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-[#10192e] border border-[#1b2a47] text-xs">
               <span className={`w-2 h-2 rounded-full ${isHealthy ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
               <span className="text-slate-300 font-mono text-[11px]">FalkorDB Online</span>
             </div>
@@ -108,20 +92,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={handleResetClick}
               disabled={resetting}
               className="flex items-center space-x-1 px-2.5 py-1.5 rounded-md bg-[#151f33] hover:bg-[#1d2b47] border border-[#233557] text-slate-300 hover:text-white text-xs font-medium transition disabled:opacity-50 cursor-pointer"
-              title="Reset scenario state"
+              title="Reset graph baseline state"
             >
               <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Reset</span>
+              <span className="hidden sm:inline">Reset Baseline</span>
             </button>
 
             {/* User Avatar */}
             <div className="flex items-center space-x-2 pl-2 border-l border-[#1b253b]">
               <div className="w-7 h-7 rounded-full bg-sky-600/20 border border-sky-500/40 flex items-center justify-center text-[11px] font-bold text-sky-300">
-                AV
+                AH
               </div>
               <div className="hidden lg:block text-left text-[11px] leading-tight">
-                <div className="font-semibold text-slate-200">Alex Vance</div>
-                <div className="text-[10px] text-slate-400 font-mono">Okta SSO</div>
+                <div className="font-semibold text-slate-200">Alice Henderson</div>
+                <div className="text-[10px] text-slate-400 font-mono">Okta SSO (SecOps)</div>
               </div>
             </div>
           </div>

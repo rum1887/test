@@ -248,6 +248,31 @@ class AgentMCPGateway:
                 "columns": ["id", "account_ref", "created_at"],
                 "data": [[1, "acc-991", now_iso], [2, "acc-992", now_iso]],
             }
+        elif tool_name == "lookup_customer_balance":
+            acc_id = parameters.get("account_id", "acc-104")
+            data = {
+                "account_id": acc_id,
+                "account_holder": "Sarah Jenkins",
+                "organization": "Acme Premier Corp",
+                "tier": "Enterprise Tier 1",
+                "ledger_balance": "$24,850.00",
+                "available_funds": "$24,500.00",
+                "currency": "USD",
+                "status": "ACTIVE_VERIFIED",
+                "last_verified_at": now_iso,
+            }
+        elif tool_name == "get_transaction_history":
+            acc_id = parameters.get("account_id", "acc-104")
+            data = {
+                "account_id": acc_id,
+                "transactions": [
+                    {"tx_id": "tx-8812", "timestamp": now_iso, "amount": "-$120.00", "counterparty": "Cloudflare Enterprise", "type": "DEBIT"},
+                    {"tx_id": "tx-8811", "timestamp": now_iso, "amount": "+$15,000.00", "counterparty": "Apex Inbound Wire", "type": "CREDIT"},
+                    {"tx_id": "tx-8810", "timestamp": now_iso, "amount": "-$4,200.00", "counterparty": "AWS Cloud Services", "type": "DEBIT"},
+                ],
+                "record_count": 3,
+                "retrieved_at": now_iso,
+            }
         else:
             data = {"message": f"Tool '{tool_name}' executed successfully with params {parameters}"}
 

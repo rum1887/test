@@ -280,7 +280,92 @@ export const api = {
     );
     return res.json();
   },
+
+  async getTargetAppState(): Promise<TargetAppState> {
+    const res = await fetch(`${API_BASE_URL}/api/target-app/state`);
+    return res.json();
+  },
+
+  async sendTargetAppChat(req: { message: string; session_id?: string; account_id?: string }): Promise<TargetAppChatResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/target-app/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+    });
+    return res.json();
+  },
+
+  async resetTargetAppSession(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/target-app/reset-session`, { method: 'POST' });
+    return res.json();
+  },
 };
+
+export interface TargetAppState {
+  application_name: string;
+  app_id: string;
+  environment: string;
+  connected_agent: {
+    id: string;
+    name: string;
+    model: string;
+    session_id: string;
+    principal: {
+      name: string;
+      role: string;
+    };
+    delegated_scopes: string[];
+    session_status: string;
+  };
+  target_customer: {
+    account_id: string;
+    holder_name: string;
+    company: string;
+    tier: string;
+    verified: boolean;
+    ledger_balance: string;
+    credit_limit: string;
+  };
+  protected_crown_jewels: {
+    id: string;
+    name: string;
+    sensitivity: string;
+    compliance: string[];
+  }[];
+}
+
+export interface TargetAppChatResponse {
+  message: string;
+  attack_detected: boolean;
+  attack_category: string;
+  agent_thought: string;
+  tool_called: {
+    name: string;
+    parameters: Record<string, any>;
+  };
+  gateway_intercepted: boolean;
+  status_code: number;
+  decision: {
+    decision_id: string;
+    decision: 'ALLOW' | 'DENY' | 'REQUIRE_APPROVAL' | 'RESTRICT';
+    rationale: string;
+    evaluated_rules: {
+      rule_id: string;
+      rule_name: string;
+      passed: boolean;
+      description: string;
+      remediation: string;
+    }[];
+    enforcement_point: string;
+    timestamp: number;
+  };
+  execution_result?: any;
+  agent_reply: string;
+  averted_consequence: string;
+  latency_ms: number;
+  evidence_hash: string;
+  timestamp: number;
+}
 
 export interface ComplianceControl {
   id: string;

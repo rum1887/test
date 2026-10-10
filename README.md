@@ -10,6 +10,33 @@
 
 ---
 
+## 📚 Documentation Index
+
+| Document | Description |
+| :--- | :--- |
+| **[Live Pitch & Demo Runbook](docs/live-demo-script.md)** | 3-minute pitch runbook, script, talking points, and 1-click test scenarios |
+| **[Enterprise Onboarding & Architecture Guide](docs/onboarding-guide.md)** | Step-by-step onboarding, SDK snippets (Python, Claude MCP, OpenAI, K8s sidecar), ingestion pipelines, and BFS graph algorithms |
+| **[Enterprise Client Pitch Deck](docs/client-pitch.md)** | Full enterprise sales pitch, market comparison vs CSPM/CWPP, and ROI |
+| **[Graph Model & Cypher Queries](docs/graph-model.md)** | Schema definitions, 20 graph indexes, and parameterized Cypher queries |
+| **[Runtime Enforcement Architecture](docs/enforcement.md)** | Fail-closed pre-execution gateway, policy evaluation, and evidence hashing |
+| **[Threat Model & Attack Scenarios](docs/threat-model.md)** | Threat model covering prompt injection, goal hijacking, and lateral movement |
+| **[Deployment Runbook](docs/deployment.md)** | Docker Compose and Kubernetes deployment instructions |
+
+---
+
+## ⚡ Quick Start (Run Locally in 60 Seconds)
+
+```bash
+# 1. Start FalkorDB, API Control Plane, and Web Console
+docker compose -f deploy/docker/docker-compose.yml up -d
+
+# 2. Open Web Dashboard in your browser
+open http://localhost:5173
+```
+- **Web Console**: `http://localhost:5173`
+- **Control Plane API**: `http://localhost:8000` (Docs: `http://localhost:8000/docs`)
+- **FalkorDB Graph Engine**: `localhost:6379`
+
 ## 1. Executive Summary & Product Vision
 
 Modern cloud applications increasingly delegate sensitive tasks to autonomous AI agents running inside Kubernetes clusters. However:
