@@ -59,12 +59,12 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
   - [x] Audit logging via `ToolCall` graph nodes
   - [x] *Acceptance Gate:* Tool tests pass; MCP server lists registered tools; gateway denies unauthorized actions.
 
-- [ ] **M5: LLM Layer & Record/Replay**
-  - [ ] Anthropic client wrapper (`backend/app/agent/llm.py`) with `claude-sonnet-5-5` (or latest supported Anthropic model)
-  - [ ] Record/replay cache keyed by hash of model, prompt, messages, tools, temp
-  - [ ] `MockLLM` for unit tests and deterministic replay mode
-  - [ ] Token usage and approximate cost tracking per investigation
-  - [ ] *Acceptance Gate:* Replay mode runs a scripted dummy investigation deterministically without external API calls.
+- [x] **M5: LLM Layer & Record/Replay**
+  - [x] Anthropic client wrapper (`backend/app/agent/llm.py`) with `claude-sonnet-5-5` (or latest supported Anthropic model)
+  - [x] Record/replay cache keyed by hash of model, prompt, messages, tools, temp
+  - [x] `MockLLM` for unit tests and deterministic replay mode
+  - [x] Token usage and approximate cost tracking per investigation
+  - [x] *Acceptance Gate:* Replay mode runs a scripted dummy investigation deterministically without external API calls.
 
 - [ ] **M6: Analyst Core**
   - [ ] System prompts (`backend/app/agent/prompts.py`) for planner, reader, and verifier
