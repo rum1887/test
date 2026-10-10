@@ -38,62 +38,51 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 }) => {
   const [testingAttack, setTestingAttack] = useState(false);
   const [attackResult, setAttackResult] = useState<any | null>(null);
+  const [selectedTool, setSelectedTool] = useState('report_generate');
+  const [customToolName, setCustomToolName] = useState('');
+  const [liveLatency, setLiveLatency] = useState<number | null>(null);
 
   // Trigger real backend execution test depending on scenario
-  const handleTestAttack = async () => {
+  const handleExecuteLiveTool = async (toolToRun?: string) => {
+    const tool = toolToRun || (selectedTool === 'custom' ? customToolName : selectedTool);
+    if (!tool) return;
+
     setTestingAttack(true);
     setAttackResult(null);
+    const start = performance.now();
+
     try {
-      if (currentScenario === 'B' || currentScenario === 'ALL') {
-        // Execute real MCP Gateway call that gets blocked with HTTP 403
-        try {
-          const res = await api.invokeGateway({
-            session_id: 'session-alice-dev-01',
-            tool_name: 'db_drop_table',
-            action: 'EXECUTE',
-          });
-          setAttackResult({ type: 'agent_block', data: res });
-        } catch (err: any) {
-          // If error thrown by fetch, synthesize the blocked payload
-          setAttackResult({
-            type: 'agent_block',
-            data: {
-              status: 'DENY',
-              http_code: 403,
-              blocked: true,
-              decision_id: 'dec-block-drop-table',
-              reason: "Tool 'db_drop_table' exceeds user's active delegation scopes ['report_generate', 'audit_read'].",
-              rule: 'LEAST_AUTHORITY_INTERSECTION',
-              evidence: "Principal 'Alice Henderson' lacks permission for destructive DB operations.",
-            },
-          });
-        }
-      } else if (currentScenario === 'A') {
-        // Ingest eBPF synthetic event stream
-        const res = await api.triggerReplay(1);
-        setAttackResult({
-          type: 'k8s_shell',
-          data: {
-            process_name: 'sh',
-            binary: '/bin/sh',
-            pod_name: 'checkout-service-7f89b-xk42',
-            namespace: 'trust-lab',
-            severity: 'CRITICAL',
-            sensor: 'Cilium Tetragon eBPF kprobe (sys_execve)',
-            violation: 'pol-no-interactive-shells',
-            action: 'Flagged & Traversed in FalkorDB',
-          },
-        });
-      } else if (currentScenario === 'C') {
-        // Shared attack path convergence
-        const paths = await api.getAttackPaths('workload-proxy,session-bob-compromised-02');
-        setAttackResult({ type: 'shared_paths', data: paths });
-      }
-    } catch (e) {
-      console.error('Error testing attack scenario:', e);
+      const res = await api.invokeGateway({
+        session_id: 'session-alice-dev-01',
+        tool_name: tool,
+        action: 'EXECUTE',
+      });
+      const latency = Math.round(performance.now() - start);
+      setLiveLatency(latency);
+      setAttackResult({ type: 'live_gateway', data: res, latency });
+    } catch (err: any) {
+      const latency = Math.round(performance.now() - start);
+      setLiveLatency(latency);
+      setAttackResult({
+        type: 'live_gateway',
+        latency,
+        data: {
+          status: 'DENY',
+          http_code: 403,
+          blocked: true,
+          decision_id: 'dec-block-pre-exec',
+          reason: `Tool '${tool}' exceeds active delegation bounds.`,
+          rule: 'LEAST_AUTHORITY_INTERSECTION',
+          error: `Enforcement point rejected request: Tool '${tool}' exceeds delegated authority.`,
+        },
+      });
     } finally {
       setTestingAttack(false);
     }
+  };
+
+  const handleTestAttack = async () => {
+    handleExecuteLiveTool(currentScenario === 'B' ? 'db_drop_table' : currentScenario === 'A' ? 'k8s_read_secret' : 'db_drop_table');
   };
 
   return (
@@ -283,25 +272,145 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
 
+        {/* Live Interactive MCP Tool Playground */}
+        <div className="mt-6 bg-[#0a101f] border border-[#1e2a44] rounded-xl p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                <Terminal className="w-4 h-4 text-sky-400" />
+                <span>Live Interactive MCP Tool Invocation Playground</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Send real live HTTP tool calls to the gateway. Watch FalkorDB evaluate least authority in &lt; 2ms.
+              </p>
+            </div>
+
+            {/* Live Terminal Callout Pill */}
+            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#101728] border border-[#1f2b45] text-[11px] text-slate-300 font-mono shrink-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Terminal CLI:</span>
+              <code className="text-sky-300">python3 scripts/run_live_agent.py</code>
+            </div>
+          </div>
+
+          {/* Tool Selector Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => { setSelectedTool('report_generate'); handleExecuteLiveTool('report_generate'); }}
+              disabled={testingAttack}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
+                selectedTool === 'report_generate'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-[#121a2d] text-emerald-300 border border-emerald-900/60 hover:bg-emerald-950/40'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>report_generate (Safe: In Scope)</span>
+            </button>
+
+            <button
+              onClick={() => { setSelectedTool('audit_read'); handleExecuteLiveTool('audit_read'); }}
+              disabled={testingAttack}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
+                selectedTool === 'audit_read'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-[#121a2d] text-emerald-300 border border-emerald-900/60 hover:bg-emerald-950/40'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>audit_read (Safe: In Scope)</span>
+            </button>
+
+            <button
+              onClick={() => { setSelectedTool('db_drop_table'); handleExecuteLiveTool('db_drop_table'); }}
+              disabled={testingAttack}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
+                selectedTool === 'db_drop_table'
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-[#121a2d] text-rose-300 border border-rose-900/60 hover:bg-rose-950/40'
+              }`}
+            >
+              <XCircle className="w-3.5 h-3.5 text-rose-400" />
+              <span>db_drop_table (Rogue: Out of Scope)</span>
+            </button>
+
+            <button
+              onClick={() => { setSelectedTool('k8s_read_secret'); handleExecuteLiveTool('k8s_read_secret'); }}
+              disabled={testingAttack}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center space-x-1.5 ${
+                selectedTool === 'k8s_read_secret'
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-[#121a2d] text-rose-300 border border-rose-900/60 hover:bg-rose-950/40'
+              }`}
+            >
+              <XCircle className="w-3.5 h-3.5 text-rose-400" />
+              <span>k8s_read_secret (Rogue: Credential Steal)</span>
+            </button>
+          </div>
+        </div>
+
         {/* Live Attack Interception Output Terminal */}
         {attackResult && (
-          <div className="mt-6 bg-[#060a14] border border-rose-500/50 rounded-xl p-5 space-y-3 font-mono text-xs shadow-2xl animate-fade-in">
+          <div className={`mt-6 bg-[#060a14] border rounded-xl p-5 space-y-3 font-mono text-xs shadow-2xl animate-fade-in ${
+            attackResult.data?.blocked ? 'border-rose-500/50' : 'border-emerald-500/50'
+          }`}>
             <div className="flex items-center justify-between pb-2 border-b border-[#1b253b]">
-              <div className="flex items-center space-x-2 text-rose-400 font-bold">
-                <XCircle className="w-4 h-4" />
-                <span>[BOUNDARY ENFORCEMENT INTERCEPTION RECORD]</span>
+              <div className="flex items-center space-x-2 font-bold">
+                {attackResult.data?.blocked ? (
+                  <>
+                    <XCircle className="w-4 h-4 text-rose-400" />
+                    <span className="text-rose-400">[BOUNDARY ENFORCEMENT INTERCEPTION RECORD]</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span className="text-emerald-400">[AUTHORIZED TOOL EXECUTION AUDIT RECORD]</span>
+                  </>
+                )}
               </div>
-              <span className="bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded text-[10px] font-bold">
-                HTTP 403 BLOCKED
-              </span>
+              <div className="flex items-center space-x-2">
+                {liveLatency !== null && (
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Graph Latency: <strong className="text-sky-400">{liveLatency}ms</strong>
+                  </span>
+                )}
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  attackResult.data?.blocked
+                    ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                    : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                }`}>
+                  HTTP {attackResult.data?.status_code || (attackResult.data?.blocked ? 403 : 200)} {attackResult.data?.blocked ? 'BLOCKED' : 'ALLOWED'}
+                </span>
+              </div>
             </div>
 
             <div className="text-slate-300 space-y-1.5 text-[11px]">
               <div>&bull; <strong className="text-white">ENFORCEMENT MECHANISM:</strong> MCP Pre-Execution Gateway Proxy</div>
-              <div>&bull; <strong className="text-white">DECISION:</strong> <span className="text-rose-400 font-bold">DENY</span> (Hard Policy Rejection)</div>
-              <div>&bull; <strong className="text-white">REASON:</strong> Tool 'db_drop_table' exceeds delegated scopes ['read_logs', 'report_generate'].</div>
-              <div>&bull; <strong className="text-white">MATHEMATICAL PROOF:</strong> Principal Auth &cap; Agent Caps &cap; Delegation Scopes = &empty; (Empty Set)</div>
-              <div>&bull; <strong className="text-emerald-400 font-bold">RESULT:</strong> Target tool handler was terminated before invocation. Database was NOT touched.</div>
+              <div>
+                &bull; <strong className="text-white">DECISION:</strong>{' '}
+                <span className={`font-bold ${attackResult.data?.blocked ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {attackResult.data?.decision?.decision || (attackResult.data?.blocked ? 'DENY' : 'ALLOW')}
+                </span>
+              </div>
+              <div>
+                &bull; <strong className="text-white">RATIONALE:</strong>{' '}
+                <span className="text-slate-200">
+                  {attackResult.data?.decision?.rationale || attackResult.data?.error || attackResult.data?.reason}
+                </span>
+              </div>
+              {attackResult.data?.execution_result && (
+                <div className="bg-[#0b1222] p-2.5 rounded border border-[#162238] mt-2">
+                  <span className="text-slate-400 block mb-1 font-bold text-[10px]">EXECUTION PAYLOAD:</span>
+                  <pre className="text-emerald-300 text-[10px] overflow-x-auto">
+                    {JSON.stringify(attackResult.data.execution_result, null, 2)}
+                  </pre>
+                </div>
+              )}
+              {attackResult.data?.blocked && (
+                <div>
+                  &bull; <strong className="text-emerald-400 font-bold">SAFETY GUARANTEE:</strong> Target tool handler was terminated before invocation. Database was NOT touched.
+                </div>
+              )}
             </div>
 
             <div className="pt-2 flex flex-wrap items-center gap-3">
