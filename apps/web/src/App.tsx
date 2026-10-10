@@ -13,6 +13,7 @@ import { api, HealthResponse, StatsResponse, CytoscapeNode, CytoscapeEdge } from
 
 export function App() {
   const [currentTab, setCurrentTab] = useState<string>('overview');
+  const [currentScenario, setCurrentScenario] = useState<string>('B');
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [nodes, setNodes] = useState<CytoscapeNode[]>([]);
@@ -63,6 +64,7 @@ export function App() {
 
   const handleLoadScenario = async (scenarioKey: string) => {
     try {
+      setCurrentScenario(scenarioKey);
       await api.loadScenario(scenarioKey);
       await loadPlatformData();
       showToast(`Scenario ${scenarioKey} loaded successfully.`);
@@ -83,19 +85,15 @@ export function App() {
     }
   };
 
-  const handleTestAgentBlock = () => {
-    setCurrentTab('agents');
-  };
-
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-200 flex flex-col font-sans">
       <Navbar
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
+        currentScenario={currentScenario}
+        onSelectScenario={handleLoadScenario}
         health={health}
         onReset={handleReset}
-        onLoadScenario={handleLoadScenario}
-        onTriggerReplay={handleTriggerReplay}
       />
 
       {/* Toast Alert */}
@@ -112,9 +110,9 @@ export function App() {
           <OverviewView
             stats={stats}
             health={health}
+            currentScenario={currentScenario}
+            onSelectScenario={handleLoadScenario}
             onNavigate={(tab) => setCurrentTab(tab)}
-            onTriggerReplay={handleTriggerReplay}
-            onTestAgentBlock={handleTestAgentBlock}
           />
         )}
 
