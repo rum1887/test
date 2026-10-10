@@ -92,19 +92,19 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
   - [x] Results generator (`backend/app/eval/report.py`): `eval/results.json` and `docs/RESULTS.md`
   - [x] *Acceptance Gate:* `make eval` completes in replay mode and generates full comparison tables.
 
-- [ ] **M9: UI, Docs, and Demo Path**
-  - [ ] React + Vite + TypeScript web interface under `web/`:
+- [x] **M9: UI, Docs, and Demo Path**
+  - [x] React + Vite + TypeScript web interface under `web/`:
     - Inbox view with scenario runner and world reset
     - Investigation hero screen with live trace timeline, verifier results, and Cytoscape evidence subgraph
     - Approvals panel with exposure reduction preview
     - Watches & schedule panel with simulated clock fast-forward
     - Eval results table view
     - Graph explorer with "as of" time toggle and honest synthetic/replay mode badge
-  - [ ] Documentation deliverables:
+  - [x] Documentation deliverables:
     - `README.md` with architecture diagram, query docs, setup, honest limitations, AI disclosure
     - `docs/DEMO.md` with 3-minute script
     - `docs/RESULTS.md` with eval tables
     - `docs/BLOG.md` draft post
     - `docs/LIMITATIONS.md`
     - `FINAL_REPORT.md`
-  - [ ] *Acceptance Gate:* `make demo` runs clean 3-minute runbook offline in replay mode; all tests pass.
+  - [x] *Acceptance Gate:* `make demo` runs clean 3-minute runbook offline in replay mode; all tests pass.

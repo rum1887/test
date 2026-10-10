@@ -41,6 +41,12 @@ class SimulatedClock:
             self._current_time = initial_time
             return self._current_time
 
+    def iso_string(self) -> str:
+        """Returns ISO formatted string of current simulated time."""
+        from datetime import datetime, timezone
+
+        return datetime.fromtimestamp(self.now(), tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
 
 _clock_instance: SimulatedClock | None = None
 

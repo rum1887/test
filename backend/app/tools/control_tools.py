@@ -198,7 +198,8 @@ def request_approval(
             ar.rationale = $rationale,
             ar.target_id = $target_id,
             ar.status = 'pending',
-            ar.created_at = $now
+            ar.created_at = $now,
+            ar.investigation_id = $invid
         """,
         {
             "id": approval_id,
@@ -206,6 +207,7 @@ def request_approval(
             "rationale": rationale,
             "target_id": target_id,
             "now": now,
+            "invid": investigation_id,
         },
     )
 

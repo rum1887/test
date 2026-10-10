@@ -1,387 +1,237 @@
-# Runtime Trust Layer
-### Graph-Native AI Firewall & Dynamic Trust Store for Autonomous Agents
+# Trust Analyst
+### Autonomous Graph-Native Security Analyst on FalkorDB
 
 [![FalkorDB](https://img.shields.io/badge/Graph_Database-FalkorDB_v4-blue.svg)](https://www.falkordb.com/)
-[![MCP](https://img.shields.io/badge/Protocol-Model_Context_Protocol_(MCP)-8A2BE2.svg)](https://modelcontextprotocol.io/)
-[![Tetragon](https://img.shields.io/badge/Runtime_Sensor-Cilium_Tetragon_eBPF-brightgreen.svg)](https://tetragon.io/)
+[![Protocol](https://img.shields.io/badge/Protocol-Model_Context_Protocol_(MCP)-8A2BE2.svg)](https://modelcontextprotocol.io/)
+[![Sensor](https://img.shields.io/badge/Sensor-Cilium_Tetragon_eBPF-brightgreen.svg)](https://tetragon.io/)
+[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Runtime Trust Layer** is a graph-native runtime security control plane that provides a **Dynamic Storage Graph** of identities, roles, RBAC, AI agents, microservices, and MCP tools, coupled with an **Agentic AI Firewall** that intercepts agent actions across 4 defensive layers, explores multi-hop authority in **FalkorDB**, and enforces deterministic decisions before dangerous tools can execute.
+> **Trust Analyst** is an autonomous security analyst built for **Graph Hacks: Context for AI Agents (WeMakeDevs x FalkorDB)**. It receives runtime security alerts about workloads and AI-agent sessions, investigates them by walking a **FalkorDB** graph, gathers telemetry and context, reaches an evidence-cited verdict, proposes containment that a human approves, verifies that containment succeeded, and registers long-running watches and scheduled tasks.
 
 ---
 
-## 📚 Documentation Index
+## 🏆 Hackathon Tracks
+- **Primary Track:** *Agents That Act on Connected Data* (Autonomous agent investigation, tool-driven graph walks, MCP gateways, real-time path traversal).
+- **Secondary Track:** *Agent Memory and Coordination* (Graph-backed incident memory, verified findings, baseline comparisons, temporal state tracking).
 
+---
+
+## 📚 Documentation Directory
 | Document | Description |
 | :--- | :--- |
-| **[Live Pitch & Demo Runbook](docs/live-demo-script.md)** | 3-minute pitch runbook, script, talking points, and 1-click test scenarios |
-| **[Enterprise Onboarding & Architecture Guide](docs/onboarding-guide.md)** | Step-by-step onboarding, SDK snippets (Python, Claude MCP, OpenAI, K8s sidecar), ingestion pipelines, and BFS graph algorithms |
-| **[Enterprise Client Pitch Deck](docs/client-pitch.md)** | Full enterprise sales pitch, market comparison vs CSPM/CWPP, and ROI |
-| **[Graph Model & Cypher Queries](docs/graph-model.md)** | Schema definitions, 20 graph indexes, and parameterized Cypher queries |
-| **[Runtime Enforcement Architecture](docs/enforcement.md)** | Fail-closed pre-execution gateway, policy evaluation, and evidence hashing |
-| **[Threat Model & Attack Scenarios](docs/threat-model.md)** | Threat model covering prompt injection, goal hijacking, and lateral movement |
-| **[Deployment Runbook](docs/deployment.md)** | Docker Compose and Kubernetes deployment instructions |
+| **[3-Minute Demo Runbook](docs/DEMO.md)** | Step-by-step walkthrough of the offline demo matching `make demo` and the web UI |
+| **[Evaluation & Benchmark Results](docs/RESULTS.md)** | Full benchmark tables across 14 scenarios comparing Trust Analyst against B0, B1, and B2 ablated |
+| **[Cypher Queries & Algorithms](docs/QUERIES.md)** | Complete documentation of all 8 Cypher graph algorithms used in production |
+| **[Draft Blog Post](docs/BLOG.md)** | Comprehensive technical blog post on graph-native agentic security |
+| **[Technical Limitations](docs/LIMITATIONS.md)** | Honest engineering disclosures regarding synthetic boundaries and fail-closed gates |
+| **[Final Project Report](FINAL_REPORT.md)** | Executive hackathon summary and verification checklist |
 
 ---
 
-## ⚡ Quick Start (Run Locally in 60 Seconds)
+## ⚡ Quick Start (60 Seconds)
+
+### Prerequisites
+- Docker & Docker Compose
+- Python 3.12+ (or Node 20+ for web UI)
 
 ```bash
-# 1. Start FalkorDB, API Control Plane, and Web Console
-docker compose -f deploy/docker/docker-compose.yml up -d
+# 1. Start FalkorDB and all container services
+make up
 
-# 2. Open Web Dashboard in your browser
-open http://localhost:5173
+# 2. Seed the synthetic security world in FalkorDB (~311 nodes, seed=42)
+make seed
+
+# 3. Run the automated 3-minute offline demo
+make demo
+
+# 4. Run the 14-scenario evaluation benchmark
+make eval
+
+# 5. Run all 40 unit and integration tests
+make test
 ```
-- **Web Console**: `http://localhost:5173`
-- **Control Plane API**: `http://localhost:8000` (Docs: `http://localhost:8000/docs`)
-- **FalkorDB Graph Engine**: `localhost:6379`
 
-## 1. Executive Summary & Product Vision
+- **Web Dashboard:** `http://localhost:5173`
+- **FastAPI Control Plane:** `http://localhost:8000` (API Docs: `http://localhost:8000/docs`)
+- **FalkorDB Browser:** `http://localhost:3000`
 
-Modern cloud applications increasingly delegate sensitive tasks to autonomous AI agents running inside Kubernetes clusters. However:
-- **Static permissions** show only what a workload or agent *may* be authorized to do.
-- **Runtime telemetry** shows what actions were *observed* at the kernel level.
-- **Identity & delegation** explain *on whose behalf* an action was performed.
+---
 
-Until now, these signals lived in three disconnected silos. **Runtime Trust Layer** combines them in **FalkorDB** to answer the critical questions:
-- *Who initiated this action, and which identity authorized it?*
-- *Is the AI agent acting within the human user's explicitly delegated authority?*
-- *Which sensitive crown jewels could the compromised workload or agent reach?*
-- *Which suspicious actions were observed in real eBPF kernel telemetry?*
-- *What is the plausible blast radius, and which containment action eliminates exposure with minimum service disruption?*
-- *Was the unauthorized operation actually blocked before execution at the physical boundary?*
+## 1. Product Vision & The Alert Fatigue Dilemma
 
-**Hackathon Tracks**:
-- **Primary**: *Agents That Act on Connected Data* (Autonomous agent delegation, MCP gateways, real-time graph path traversal).
-- **Secondary**: *Agent Memory and Coordination* (Graph-backed incident memory, correlated policy violations, auditable containment).
+In modern cloud and AI environments, pairs of alerts look **identical on the surface** but have **opposite ground truths**:
+- **Scenario A (Benign):** An engineer runs `kubectl exec` to debug an active latency incident during an approved change window.
+- **Scenario B (Malicious):** A web server process suffers an RCE, spawns `/bin/sh`, queries cloud metadata (`169.254.169.254`), and accesses customer vault secrets.
+
+Both emit identical eBPF telemetry signatures: `/bin/sh` connecting to `169.254.169.254`.
+
+A traditional static rule baseline (*"flag every alert of this type"*) achieves a **100.0% False Positive Rate (FPR)** on benign operational activities, crippling engineering velocity. Distinguishing between them requires a chain of relational questions across connected data:
+1. *Who launched this process?* (PID $\to$ PPID ancestry)
+2. *Does the user have an approved ticket or ChangeSet?* (Temporal graph lookup)
+3. *What sensitive resources can this entity reach right now?* (Outbound reachability)
+4. *Are parallel active attack vectors targeting the same secret?* (Choke-point convergence)
+
+The graph computes **what is possible** (paths, reachability, diffs). The agent decides **what is justified** (intent, authorization, explanation).
 
 ---
 
 ## 2. Architecture Diagram
 
 ```
-+-----------------------------------------------------------------------------------+
-|                                 HUMAN PRINCIPALS                                  |
-|            Alice Henderson (Compliance)       Bob Martinez (DevOps Admin)         |
-+----------------------------------------+------------------------------------------+
-                                         |
-                               DELEGATES_TO (Scopes, Expiry)
-                                         v
-+------------------------+      +----------------------------+
-|  Kubernetes Workloads  |      |      AI Agent Session      |
-|  - checkout-service    |      |   - session-alice-dev-01   |
-|  - frontend-proxy      |      |   - session-bob-02         |
-|  - order-processor     |      |   Agent: AutoDev-Agent     |
-+-----------+------------+      +-------------+--------------+
-            |                                 |
-    EMITTED_EVENT (eBPF)                 CAN_INVOKE
-            |                                 |
-            v                                 v
-+-----------------------------------------------------------------------------------+
-|                        FALKORDB GRAPH CONTROL PLANE                                |
-|  - Bounded Workload Blast Radius Traversal                                        |
-|  - Delegated Authority & Expiry Evaluation                                        |
-|  - Multi-Source Converged Attack Paths                                            |
-|  - Read-Only Hypothetical Containment Simulations                                 |
-|  - Automated Graph Integrity Validations                                          |
-+----------------------------------------+------------------------------------------+
-                                         |
-                                         v
-+-----------------------------------------------------------------------------------+
-|                       DETERMINISTIC ENFORCEMENT POINTS                            |
-|                                                                                   |
-|   1. MCP Tool Gateway (`ep-mcp-gateway-01`)                                       |
-|      - Pre-Execution Evaluation: BLOCKS unauthorized calls (HTTP 403 / 428)       |
-|      - Prevents execution BEFORE tool handler runs. Records proof in FalkorDB.    |
-|                                                                                   |
-|   2. Kubernetes Lab Quarantine Controller (`ep-k8s-admission-01`)                 |
-|      - Applies Default-Deny Network Policies isolating compromised pods           |
-|      - Confirms applied status before transitioning: Applied -> Verified          |
-+-----------------------------------------------------------------------------------+
+                              RUNTIME INCIDENT EVENT
+                                        │
+                                        ▼
+                        ┌───────────────────────────────┐
+                        │      Simulated Clock (sim)    │
+                        │   Unified epoch time source   │
+                        └───────────────┬───────────────┘
+                                        │
+                                        ▼
+    ┌───────────────────────────────────────────────────────────────────────┐
+    │                     AUTONOMOUS ANALYST CORE LOOP                      │
+    │                                                                       │
+    │   1. Alert Ingestion & Target Resolution                              │
+    │   2. Autonomous Triage & Neighborhood Context                         │
+    │   3. Competing Hypotheses Formulation (e.g. Authorized vs Compromise) │
+    │   4. Quarantined Reader (Neutralizes adversarial prompt injections)   │
+    │   5. Forensic Graph Walk (Cypher queries & Tetragon telemetry)        │
+    │   6. Two-Stage Verification (Deterministic existence + Entailment)    │
+    │   7. Policy Gateway Enforcement (Fail-closed authorization check)     │
+    └───────────────────────────────────┬───────────────────────────────────┘
+                                        │
+                                        ▼
+    ┌───────────────────────────────────────────────────────────────────────┐
+    │                     FALKORDB LOAD-BEARING GRAPH                       │
+    │                                                                       │
+    │   • Security Entities: Workloads, Pods, SAs, Sessions, Tools, Secrets │
+    │   • Temporal Validity: valid_from, valid_to, provenance, source       │
+    │   • Telemetry Nodes: EventSummary signatures (exec, connect, reads)   │
+    │   • Operational State: Investigations, Hypotheses, Claims, Findings   │
+    │   • Durable Controls: Active Watches & Scheduled Follow-up Tasks      │
+    └───────────────────────────────────┬───────────────────────────────────┘
+                                        │
+                                        ▼
+    ┌───────────────────────────────────────────────────────────────────────┐
+    │                 HUMAN-IN-THE-LOOP & VERIFICATION                      │
+    │                                                                       │
+    │   1. Human Operator Approval (ApprovalRequest node review)            │
+    │   2. Surgical Remediation (apply_isolation / revoke_session)          │
+    │   3. Post-Action Telemetry Verification (Zero egress check)           │
+    │   4. Stubborn Exposure Escalation (Detects multi-path convergence)    │
+    │   5. Durable Watch Activation (24h condition monitoring in FalkorDB)  │
+    └───────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Unified Graph Data Model
+## 3. Why FalkorDB is Load-Bearing
 
-The FalkorDB graph schema captures the relationships between infrastructure, identity, runtime events, and enforcement:
+If FalkorDB were removed, **Trust Analyst would immediately fail closed and stop working**. All core state lives inside FalkorDB:
+- **No SQLite / Postgres / Redis queues:** All entities, telemetry summaries, change records, investigations, hypotheses, evidence, findings, memory baselines, watches, schedules, approvals, and tool-call audit logs live directly in FalkorDB.
+- **Temporal Convention:** Every relationship carrying world state possesses `valid_from` and `valid_to` epoch integers. Queries take an `$at` parameter to query point-in-time past states.
+- **Fail-Closed Policy Gateway:** The agent's own actions are mediated by a deterministic gateway that inspects FalkorDB before executing any disruptive tool.
+
+### Node Labels (26 Labels)
+`Principal`, `Agent`, `AgentSession`, `Delegation`, `Tool`, `MCPServer`, `Workload`, `Pod`, `ServiceAccount`, `Permission`, `SensitiveResource`, `NetworkEndpoint`, `ChangeSet`, `Document`, `EventSummary`, `Baseline`, `Alert`, `Investigation`, `Hypothesis`, `Evidence`, `Claim`, `Finding`, `ApprovalRequest`, `Watch`, `ScheduledTask`, `ToolCall`.
+
+---
+
+## 4. Key Cypher Queries & Graph Algorithms
+
+All production queries are centralized in `backend/app/graph/queries.py`:
+
+1. **Blast Radius (`blast_radius`):** Traverses outbound directed paths from a compromised entity to all reachable `SensitiveResource` nodes up to 4 hops.
+2. **Temporal Path Diff (`path_diff`):** Compares topological reachability between two timestamps (`$t_before` vs `$t_after`) to detect privilege escalation.
+3. **Delegation Chain (`delegation_chain`):** Validates authority lineages: `(Principal)-[:OWNS_SESSION]->(Session)-[:DELEGATES]->(Agent)-[:CAN_INVOKE]->(Tool)`.
+4. **Choke Point Convergence (`find_convergence`):** Identifies where multiple independent attack paths (e.g. pod + rogue agent session) converge on the same crown jewel secret.
+5. **Simulated Containment (`simulate_containment`):** Evaluates hypothetically severing edges before applying physical isolation.
+6. **Incident Memory Recall (`recall_similar_incidents`):** Performs semantic graph search over past `Finding` nodes to reuse proven remediation strategies.
+7. **Shortest Attack Path (`shortest_path`):** Computes shortest paths between any source entity and targeted sensitive asset.
+8. **Watch Evaluator Patterns (`watcher.py`):** Runs allowlisted Cypher patterns on clock ticks to awaken paused investigations.
+
+---
+
+## 5. Measured Benchmark Results
+
+Trust Analyst was evaluated across **14 realistic matched-pair scenarios** (7 benign operational events, 7 malicious attacks including 3 prompt-injection variants):
+
+| Evaluator | Accuracy | False Positive Rate (FPR) | False Negative Rate (FNR) | Precision | Evidence Recall | Injection Resistance |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Trust Analyst (Full Agent)** | **100.0%** | **0.0%** | **0.0%** | **100.0%** | **67.9%** | **100.0%** |
+| **Ablated Agent (No Graph)** | 85.7% | 0.0% | 28.6% | 100.0% | 22.6% | 100.0% |
+| **B1: Graph Heuristics** | 50.0% | 100.0% | 0.0% | 50.0% | 0.0% | 100.0% |
+| **B0: Alert Rule Baseline** | 50.0% | 100.0% | 0.0% | 50.0% | 0.0% | 100.0% |
+
+### Key Benchmark Findings:
+- **Zero False Positives:** While static SIEM rules flag 100% of benign events (alert fatigue), Trust Analyst achieves **0.0% FPR**.
+- **FalkorDB is Load-Bearing:** The ablated agent (no graph tools) failed on Pair 4 (dormant wildcard permission) and Pair 7 (stubborn multi-path convergence), proving that raw telemetry without graph topology cannot detect lateral reachability.
+- **Adversarial Robustness:** Quarantined schema extraction delivered a **100% Prompt Injection Resistance Rate** against embedded override payloads.
+
+---
+
+## 6. Repository Layout
 
 ```
-(Principal)-[:OWNS_SESSION]->(AgentSession)-[:ACTS_ON_BEHALF_OF]->(Principal)
-     |                             |
-     +-[:DELEGATES_TO]->(Delegation)-[:DELEGATES_TO]->(Agent)
-                                   |
-                             CAN_INVOKE
-                                   v
-(MCPServer)-[:CONTAINS]->(Tool)-[:CAN_ACCESS]->(SensitiveResource)
-                                                      ^
-                                                      | CAN_ACCESS
-(Workload)-[:CONTAINS]->(Pod)-[:RUNS_AS]->(ServiceAccount)-[:HAS_PERMISSION]->(Permission)
-                          |
-                  EMITTED_EVENT
-                          v
-(RuntimeEvent: eBPF)-[:VIOLATED_POLICY]->(Policy)-[:ENFORCED_AT]->(EnforcementPoint)
-```
-
-### Node Labels & Edge Types
-
-| Node Label | Key Properties | Relationship | Semantics |
-| :--- | :--- | :--- | :--- |
-| **`Principal`** | `id`, `name`, `email`, `role`, `status` | `OWNS_SESSION` | Authenticated human initiating agent sessions |
-| **`Agent`** | `id`, `name`, `model`, `capabilities` | `DELEGATES_TO` | Autonomous agent definition |
-| **`AgentSession`** | `id`, `status`, `expires_at`, `audience` | `CAN_INVOKE` | Ephemeral execution session |
-| **`Delegation`** | `id`, `scopes`, `constraints`, `expires_at`| `ACTS_ON_BEHALF_OF`| Explicit user-authorized scope bounds |
-| **`Workload`** | `id`, `name`, `namespace`, `kind`, `replicas` | `CONTAINS` | Kubernetes Deployment / StatefulSet |
-| **`Pod`** | `id`, `name`, `node_name`, `ip`, `status` | `RUNS_AS` | Running pod correlated to eBPF events |
-| **`ServiceAccount`**| `id`, `name`, `namespace`, `cluster` | `HAS_PERMISSION` | Workload identity |
-| **`Tool`** | `id`, `name`, `risk_level`, `is_destructive`| `CAN_ACCESS` | MCP tool capability |
-| **`SensitiveResource`**| `id`, `name`, `sensitivity_level` | `PROTECTED_BY` | High-value database, vault, or key |
-| **`RuntimeEvent`** | `id`, `event_type`, `mode`, `command_line` | `EMITTED_EVENT` | Tetragon eBPF kernel telemetry |
-| **`Policy`** | `id`, `name`, `effect`, `enforcement_point`| `ENFORCED_AT` | Deterministic security rule |
-| **`PolicyDecision`** | `id`, `decision`, `rationale`, `timestamp` | `VIOLATED_POLICY` | Auditable decision record |
-
----
-
-## 4. Real FalkorDB Cypher Queries & Security Algorithms
-
-All queries execute directly against FalkorDB with explicit parameterized inputs:
-
-### Query 1: Workload Blast Radius Traversal
-```cypher
-MATCH (start)
-WHERE (start:Workload OR start:Pod) AND start.id = $id
-MATCH path = (start)-[:CONTAINS|RUNS_AS|USES_CREDENTIAL|HAS_PERMISSION|CAN_ACCESS|CAN_REACH|OBSERVED_ACCESS*1..5]->(target)
-WHERE target:SensitiveResource OR target:KubernetesResource OR target:NetworkEndpoint
-RETURN
-    [n in nodes(path) | {id: n.id, label: labels(n)[0], name: coalesce(n.name, n.id)}] AS path_nodes,
-    [rel in relationships(path) | {type: type(rel), evidence_type: rel.evidence_type}] AS path_edges,
-    target.name AS target_name,
-    target.sensitivity_level AS target_sensitivity,
-    length(path) AS path_length
-LIMIT 50
-```
-*How it works*: Traverses bounded paths from a pod through service accounts, permissions, and egress endpoints to discover crown jewels. Distinguishes `configured`, `inferred`, and `observed` edges.
-
----
-
-### Query 2: Agent Delegation-Chain Analysis
-```cypher
-MATCH (p:Principal)-[:OWNS_SESSION]->(s:AgentSession {id: $session_id})
-OPTIONAL MATCH (p)-[:DELEGATES_TO]->(d:Delegation)-[:DELEGATES_TO]->(a:Agent)
-WHERE d.session_id = s.id OR d.session_id IS NULL
-OPTIONAL MATCH (s)-[:CAN_INVOKE]->(t:Tool)
-OPTIONAL MATCH (m:MCPServer)-[:CONTAINS]->(t)
-OPTIONAL MATCH (t)-[:CAN_ACCESS]->(sr:SensitiveResource)
-RETURN
-    p.name AS principal_name,
-    s.status AS session_status,
-    s.expires_at AS session_expires_at,
-    a.name AS agent_name,
-    d.scopes AS delegation_scopes,
-    t.name AS tool_name,
-    t.is_destructive AS tool_destructive,
-    sr.name AS downstream_target
-```
-*How it works*: Traces `Human Principal -> Agent Session -> Agent -> Delegation -> MCP Tool -> Downstream Resource`. Detects expired sessions, missing delegations, or requested tools exceeding granted scopes.
-
----
-
-### Query 3: Effective Authority Comparison
-The policy engine computes:
-$$\text{Effective Authority} = \text{Principal Auth} \cap \text{Agent Capabilities} \cap \text{Delegation Scopes} \cap \text{Target Constraints}$$
-- **Principal Authorization**: Human user must possess RBAC permissions for the underlying action.
-- **Agent Capability**: Agent model manifest must support the tool.
-- **Delegation Scope**: Tool must be within the active session delegation scopes (`*` or explicit tool name).
-- **Destructive Approval**: High-risk or destructive tools (`is_destructive: true`) require multi-party human confirmation (`REQUIRE_APPROVAL`).
-
----
-
-### Query 4: Shared Attack Paths Convergence
-```cypher
-MATCH (src)
-WHERE src.id IN $sources
-MATCH path = (src)-[:CONTAINS|RUNS_AS|CAN_ACCESS|CAN_INVOKE|CAN_REACH|ACTS_ON_BEHALF_OF|HAS_PERMISSION*1..5]->(target:SensitiveResource)
-RETURN
-    src.id AS source_id,
-    target.name AS target_name,
-    target.sensitivity_level AS sensitivity,
-    [n in nodes(path) | n.id] AS path_nodes,
-    length(path) AS path_len
-```
-*How it works*: Detects when distinct threat sources (e.g. compromised pod and rogue agent session) converge on the same sensitive resource. Scores targets using transparent formula:
-$$\text{Risk Score} = \text{Sensitivity Weight} \times (1.0 + 0.5 \times (\text{Sources} - 1)) \times (1.0 + 0.1 \times \text{Paths})$$
-
----
-
-### Query 5: Hypothetical Containment Simulation (Zero Graph Mutation)
-```cypher
-MATCH (start {id: $sid})
-MATCH path = (start)-[:CONTAINS|RUNS_AS|USES_CREDENTIAL|HAS_PERMISSION|CAN_ACCESS|CAN_REACH*1..5]->(target:SensitiveResource)
-RETURN
-    target.name AS target_name,
-    [n in nodes(path) | n.id] AS node_ids,
-    length(path) AS path_len
-```
-*How it works*: Computes reachable targets before and after excluding a candidate node (e.g. `pod-checkout-7f89b`). Calculates **Exposure Reduction %**, identifies eliminated targets, and alerts if alternative paths remain—**without mutating the production graph**.
-
----
-
-## 5. Live Linux eBPF vs. Replay Mode
-
-To ensure full transparency and avoid misleading claims:
-
-| Feature | Live Linux Mode (`live_ebpf`) | Replay Mode (`replay_synthetic`) |
-| :--- | :--- | :--- |
-| **Environment** | Linux kernel &ge; 5.4, Docker/Kind, `CAP_SYS_ADMIN` | Any OS, Mac, Windows, Cloudflare, Render |
-| **Telemetry Driver** | Cilium Tetragon (`sys_execve`, `sys_openat`, kprobes) | Deterministic synthetic generator |
-| **Provenance Tag** | `mode: "live_ebpf"`, `source: "tetragon_ebpf"` | `mode: "replay_synthetic"`, `source: "replay_simulator"` |
-| **Stale Detection** | Degrades confidence to `DEGRADED` if heartbeat &gt; 10m | Heartbeats refreshed deterministically |
-| **Dashboard Badge** | Green glowing **LIVE eBPF** badge | Amber **REPLAY MODE** badge |
-
----
-
-## 6. Demonstration Scenarios (Scenarios A through E)
-
-The system includes 5 built-in, reproducible scenarios with 1-click reset:
-
-- **Scenario A: Compromised Kubernetes Workload**
-  - Worker pod `checkout-service-7f89b` runs unexpected `/bin/sh` and curls AWS metadata IP (`169.254.169.254`).
-  - Tetragon captures event; correlated in FalkorDB to service account with overprivileged secret permissions.
-  - Blast Radius reveals paths to `customer-vault-secrets`. Simulation proves pod isolation cuts exposure by 100%.
-
-- **Scenario B: AI-Agent Delegation Violation**
-  - User Alice (Compliance Officer, read-only scopes `["audit_read", "report_generate"]`) asks Agent AutoDev to execute `db_drop_table`.
-  - MCP Tool Gateway evaluates policy **BEFORE** execution: rejected with HTTP 403 `DENY`.
-  - Tool handler is **never invoked**. Decision recorded in FalkorDB audit log.
-
-- **Scenario C: Shared Attack Path**
-  - Suspicious workload `frontend-proxy` and compromised session `session-bob-compromised-02` both converge on `cloud-iam-secrets`.
-  - Query 4 identifies the common target and flags that isolating only the workload leaves the agent path exposed.
-
-- **Scenario D: Stale & Missing Telemetry Detection**
-  - Workload `order-processor` telemetry stops (&gt; 20m ago); workload `analytics-worker` has zero events.
-  - System flags `STALE_TELEMETRY` (confidence `DEGRADED`) and `MISSING_TELEMETRY` (confidence `UNKNOWN`).
-
-- **Scenario E: Control Plane Outage & Fail-Closed Behavior**
-  - When FalkorDB is unreachable, protected tool invocations fail closed with HTTP 503 `DENY`. System never permits unverified access.
-
----
-
-## 7. Feature Implementation Status
-
-| Capability | Status | Implementation Details |
-| :--- | :--- | :--- |
-| FalkorDB Unified Graph Model | **Implemented** | 20 node types, 17 edge types, indexes, schema v1.0.0 (`graph/schema/`) |
-| 10 Real Cypher Security Queries | **Implemented** | Tested against live FalkorDB instance (`graph/queries/library.py`) |
-| Pre-Execution MCP Tool Gateway | **Implemented** | Blocks unauthorized calls before execution (`services/agent-gateway/`) |
-| Deterministic Policy Engine | **Implemented** | Evaluates effective authority & destructive approval (`policies/engine.py`) |
-| Cilium Tetragon eBPF Normalizer | **Implemented** | Normalizes `sys_execve` & kprobe JSON events (`services/runtime-collector/`) |
-| Deterministic Replay Mode | **Implemented** | Explicitly labeled synthetic generator for hosted demos |
-| Kind Local Kubernetes Lab | **Implemented** | Manifests for workloads, RBAC, network policies, Tetragon policy |
-| React & Cytoscape.js Web Console | **Implemented** | Interactive graph canvas, search, filters, drawer (`apps/web/`) |
-| Before/After Containment Simulator| **Implemented** | Zero-mutation exposure reduction calculation (`POST /api/containment/simulate`)|
-| Automated Test Suite | **Implemented** | 32/32 tests passing across unit, integration, and e2e (`tests/`) |
-| CI Pipeline & Smoke Test | **Implemented** | GitHub Actions workflow + standalone `scripts/smoke_test.py` |
-
----
-
-## 8. Quickstart & Installation
-
-### Option 1: Docker Compose (Recommended)
-
-```bash
-# Clone the repository
-git clone https://github.com/red-teaming/trustme.git
-cd trustme
-
-# Copy environment template
-cp .env.example .env
-
-# Start FalkorDB, API backend, and Web console
-docker compose -f deploy/docker/docker-compose.yml up --build
-```
-Access the dashboard at `http://localhost:5173` and API docs at `http://localhost:8000/docs`.
-
----
-
-### Option 2: Local Development Setup
-
-#### 1. Start FalkorDB in Docker
-```bash
-docker run -d --name trust-falkordb -p 6379:6379 falkordb/falkordb:latest
-```
-
-#### 2. Set Up Python Backend
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# Run deployment smoke test
-python scripts/smoke_test.py
-
-# Start FastAPI backend
-uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-#### 3. Set Up React Dashboard
-```bash
-cd apps/web
-npm install
-npm run dev
+trustme/
+  README.md                     # Main documentation & architecture guide
+  PLAN.md                       # Milestones M0-M9 checklist & acceptance gates
+  ASSUMPTIONS.md                # Recorded engineering assumptions
+  FINAL_REPORT.md               # Final hackathon summary report
+  Makefile                      # make up, seed, test, eval, demo, lint
+  docker-compose.yml            # Container definitions (falkordb, api, worker, web)
+  .env.example                  # Environment configuration template
+  backend/
+    app/
+      main.py                   # FastAPI REST API & Cytoscape endpoints
+      config.py                 # Pydantic settings
+      graph/
+        client.py               # Thread-safe FalkorDB client
+        schema.py               # 26 labels, 27 relationship types, indexes
+        queries.py              # Centralized Cypher algorithms
+        temporal.py             # valid_from / valid_to temporal helpers
+      sim/
+        clock.py                # SimulatedClock single source of time
+        world.py                # Deterministic synthetic world seeder (seed=42)
+        telemetry.py            # Tetragon-like telemetry generator & EventSummary
+        scenarios.py            # 14 matched-pair scenario loader & runner
+      tools/
+        registry.py             # Typed Pydantic tool registry (27 tools)
+        graph_tools.py          # Cypher graph traversal tools
+        telemetry_tools.py      # Telemetry & process tree tools
+        context_tools.py        # Audit logs & document search
+        memory_tools.py         # Memory baselines & findings
+        control_tools.py        # Watches, schedules, and approvals
+        action_tools.py         # Disruptive containment actions & verification
+        mcp_server.py           # Official Model Context Protocol (MCP) server
+      agent/
+        llm.py                  # Anthropic SDK, SHA-256 disk cache, MockLLM
+        analyst.py              # Core autonomous investigation loop
+        prompts.py              # Planner, reader, and verifier system prompts
+        reader.py               # Quarantined reader for untrusted text
+        verifier.py             # Two-stage verdict verifier
+        gateway.py              # Deterministic policy gateway
+        runner.py               # Durable investigation runner & state persistence
+        watcher.py              # Active watch evaluator on clock ticks
+        scheduler.py            # Scheduled task dispatcher
+        worker.py               # Background daemon loop
+      eval/
+        baselines.py            # B0, B1, and B2 ablated evaluators
+        harness.py              # Evaluation benchmark runner
+        metrics.py              # Accuracy, FPR, FNR, recall, cost calculator
+        report.py               # Markdown and JSON report generator
+        demo.py                 # 3-minute offline demo script
+    tests/                      # 40 unit and integration tests (100% passing)
+  scenarios/                    # 14 YAML scenario specifications
+  web/                          # React + Vite + TypeScript + Cytoscape web UI
+  docs/                         # DEMO.md, RESULTS.md, QUERIES.md, BLOG.md, LIMITATIONS.md
 ```
 
 ---
 
-## 9. Running Tests
+## 7. AI-Assistance Disclosure
 
-```bash
-# Run the complete test suite (Unit, Integration against real FalkorDB, E2E)
-pytest tests/ -v
-
-# Run the deployment smoke test
-python scripts/smoke_test.py
-
-# Run frontend build check
-cd apps/web && npm run build
-```
-
----
-
-## 10. Demo Script (Walkthrough)
-
-1. Open Web Console at `http://localhost:5173`.
-2. Observe the **Overview Dashboard**: FalkorDB status is `ONLINE`, Sensor reports `REPLAY MODE` (or `LIVE eBPF` on Linux).
-3. Click **Trust Graph**: Explore the Cytoscape canvas. Notice that sensitive resources (`customer-vault-secrets`, `payment-records-db`) glow red.
-4. Click **Workload Explorer**: Select `checkout-service`. Observe the overprivileged `secrets:get` RBAC permission. Click **Blast Radius** to trace the 8 plausible paths.
-5. Click **Agent Trust**:
-   - In the live test console, select session `Alice Henderson` and tool `db_drop_table`.
-   - Click **Invoke via MCP Gateway**.
-   - Notice the instant **HTTP 403 DENY**: The call is blocked *before* execution. The rationale cites that Alice's scopes are restricted to `[audit_read, report_generate]`.
-6. Click **Policy Engine**: View the audit entry generated by the rejected call, complete with rule evaluations.
-7. Click **Containment**:
-   - Select threat source `checkout-service`.
-   - Click **Simulate** on candidate `ISOLATE_POD`. Notice **Net Exposure Reduction: -100%**.
-   - Click **Apply Containment**: State transitions to `APPLIED` and confirms `VERIFIED`.
-8. Click **Reset** in the top navbar to return to the canonical baseline instantly.
-
----
-
-## 11. Known Limitations & Trade-Offs
-
-1. **eBPF Privileges**: Live eBPF kernel tracing requires a Linux host kernel and root/`CAP_SYS_ADMIN` privileges. On macOS development machines and serverless static hosting tiers, the platform falls back to **Replay Mode** with clear provenance labels.
-2. **Cold Starts on Free Tiers**: On free hosting tiers like Render, the backend service may sleep after 15 minutes of inactivity; allow ~30 seconds for initial wakeup.
-3. **FalkorDB Persistence**: In local Docker Compose, data persists via `falkordb_data` volume. In ephemeral test environments, running `reset` re-seeds the canonical state in &lt;1 second.
-
----
-
-## 12. AI-Assistance Disclosure
-
-In accordance with hackathon rules, this project utilized agentic pairing with Google DeepMind's Antigravity system for architectural prototyping, Cypher traversal optimization, and React/Cytoscape interface construction. All authorization rules, graph algorithms, policy evaluations, and boundary enforcement mechanisms were verified through real integration tests.
-
----
-
-## 13. License
-
-MIT License. See [LICENSE](LICENSE) for details.
+In compliance with WeMakeDevs x FalkorDB submission guidelines:
+- **AI Coding Assistant:** This project was developed with assistance from Google Antigravity / Gemini code assistants for scaffolding, typing, and refactoring.
+- **Engineering Authorship:** All threat models, security scenarios, temporal graph schemas, Cypher graph algorithms, quarantined reader architectures, and benchmark metrics were authored, validated, and refined by human developers.
+- **Deterministic Replay Guarantee:** All evaluation benchmarks and demo scripts operate deterministically via replay and mock harnesses, guaranteeing 100% offline reproducibility without external AI API dependencies.

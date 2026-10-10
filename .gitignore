@@ -12,6 +12,8 @@ build/
 # Node
 node_modules/
 .npm
+web/node_modules/
+web/dist/
 apps/web/node_modules/
 apps/web/dist/
 
