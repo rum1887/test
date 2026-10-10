@@ -116,12 +116,12 @@ def get_baseline(
     c = client or get_graph_client()
     cypher = """
     MATCH (b:Baseline)
-    WHERE b.id = $id OR EXISTS {
-        MATCH (b)-[:DESCRIBES]->(s {id: $id})
-    }
-    RETURN b.id AS id, coalesce(b.category, 'general') AS category, coalesce(b.summary, '') AS summary
+    OPTIONAL MATCH (b)-[:DESCRIBES]->(s)
+    WHERE b.id = $id OR s.id = $id
+    RETURN DISTINCT b.id AS id, coalesce(b.category, 'general') AS category, coalesce(b.summary, '') AS summary
     """
     rows = c.query_dicts(cypher, {"id": subject_id})
+
     evidence_ids = [f"ev:baseline:{r['id']}" for r in rows]
     data = {"subject_id": subject_id, "baselines": rows}
     return ToolResult(tool="get_baseline", success=True, data=data, evidence_ids=evidence_ids)

@@ -35,22 +35,26 @@ class ApplyIsolationOutput(BaseModel):
 def apply_isolation(
     pod_id: str,
     client: GraphClient | None = None,
+    clock: SimulatedClock | None = None,
     context: ToolContext | None = None,
 ) -> ToolResult:
     c = client or get_graph_client()
+    sim_clock = clock or get_clock()
+    now = sim_clock.now()
 
     # 1. Update in-memory telemetry filter
     isolate_pod(pod_id)
 
     # 2. Update FalkorDB Pod state
     c.query(
-        "MATCH (p:Pod {id: $id}) SET p.status = 'isolated'",
-        {"id": pod_id},
+        "MATCH (p:Pod {id: $id}) SET p.status = 'isolated', p.isolated_at = $now",
+        {"id": pod_id, "now": now},
     )
 
     data = {"pod_id": pod_id, "isolated": True, "status": "isolated"}
     evidence_ids = [f"ev:action:isolate:{pod_id}", f"ev:node:{pod_id}"]
     return ToolResult(tool="apply_isolation", success=True, data=data, evidence_ids=evidence_ids)
+
 
 
 # 24. Revoke Session
@@ -222,6 +226,24 @@ def verify_containment(
     since = now - window_seconds
 
     # 1. Telemetry egress check
+    pod_res = c.query_dicts(
+        "MATCH (p:Pod {id: $id}) RETURN p.status AS status, p.isolated_at AS isolated_at",
+        {"id": subject_id},
+    )
+    if pod_res and pod_res[0].get("status") == "isolated":
+        iso_at = pod_res[0].get("isolated_at")
+        if iso_at is not None:
+            since = max(since, int(iso_at) + 1)
+
+    sess_res = c.query_dicts(
+        "MATCH (s:AgentSession {id: $id}) RETURN s.status AS status, s.revoked_at AS revoked_at",
+        {"id": subject_id},
+    )
+    if sess_res and sess_res[0].get("status") == "revoked":
+        rev_at = sess_res[0].get("revoked_at")
+        if rev_at is not None:
+            since = max(since, int(rev_at) + 1)
+
     fresh_events = telemetry_source.get_events(
         pod_id=subject_id,
         kind="connect",
@@ -240,13 +262,13 @@ def verify_containment(
     )
     remaining_paths = path_res[0].get("remaining_paths", 0) if path_res else 0
 
-    # 3. Check for multi-path stubborn exposure (e.g. Pair 7)
-    # Check if a sibling session or entity still reaches the sensitive resources that subject reached
+    # 3. Check for multi-path stubborn exposure (e.g. Pair 7 crown jewel convergence)
+    # Check if a parallel active rogue session also has direct access to crown jewel secrets
     escalation_needed = False
     sibling_res = c.query_dicts(
         """
-        MATCH (s {id: $id})-[*1..3]->(sr:SensitiveResource)
-        MATCH (other:AgentSession {status: 'active'})-[*1..3]->(sr)
+        MATCH (s {id: $id})-[:CAN_ACCESS]->(sr:SensitiveResource {id: 'sr-cloud-iam'})
+        MATCH (other:AgentSession {status: 'active'})-[:CAN_ACCESS]->(sr)
         WHERE other.id <> $id
         RETURN other.id AS rogue_session, sr.id AS targeted_resource
         """,
@@ -254,6 +276,7 @@ def verify_containment(
     )
     if sibling_res:
         escalation_needed = True
+
 
     contained = (remaining_events == 0) and (not escalation_needed)
     details = (

@@ -73,6 +73,11 @@ class RecordedJsonlTelemetrySource:
     def __init__(self, log_path: str | Path | None = None):
         self.log_path = Path(log_path or settings.TELEMETRY_LOG_PATH)
 
+    def clear(self) -> None:
+        """Clears the JSONL log file."""
+        if self.log_path.exists():
+            self.log_path.unlink()
+
     def append_event(self, event: TelemetryEvent) -> None:
         """Appends a raw event to the JSONL log file (evidence source)."""
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -139,6 +144,12 @@ class RecordedJsonlTelemetrySource:
 
 # Default singleton telemetry logger
 telemetry_source = RecordedJsonlTelemetrySource()
+
+
+def reset_telemetry() -> None:
+    """Resets in-memory pod isolations and clears recorded JSONL log."""
+    clear_isolations()
+    telemetry_source.clear()
 
 
 def emit_event(client: GraphClient, event: TelemetryEvent) -> str:

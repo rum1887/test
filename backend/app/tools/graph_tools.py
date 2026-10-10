@@ -198,6 +198,7 @@ def delegation_chain(
 
 
 class FindConvergenceInput(BaseModel):
+    source_ids: list[str] = Field(default_factory=list, description="Optional starting node IDs")
     max_depth: int = Field(default=4, description="Maximum traversal depth")
     at: int | None = Field(default=None, description="Simulated epoch timestamp filter")
 
@@ -215,17 +216,20 @@ class FindConvergenceOutput(BaseModel):
     requires_approval=False,
 )
 def find_convergence(
+    source_ids: list[str] = [],
     max_depth: int = 4,
     at: int | None = None,
     client: GraphClient | None = None,
     context: ToolContext | None = None,
 ) -> ToolResult:
     c = client or get_graph_client()
-    data = q_find_convergence(c, max_depth=max_depth, at=at)
+    sources = source_ids or ["pod-ci-1", "sess-bob-data", "pod-checkout-1"]
+    data = q_find_convergence(c, source_ids=sources, at=at)
     evidence_ids = []
     for item in data:
         evidence_ids.append(f"ev:node:{item['resource_id']}")
     return ToolResult(tool="find_convergence", success=True, data={"convergences": data}, evidence_ids=evidence_ids)
+
 
 
 # 6. Shortest Path

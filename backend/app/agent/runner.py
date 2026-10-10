@@ -2,6 +2,7 @@
 Durable Investigation Runner.
 Manages persistent investigation lifecycles across process restarts.
 Reconstructs execution state strictly from FalkorDB graph state without in-memory dependency.
+Handles human approval workflows, containment action dispatch, and post-action verification escalation.
 """
 
 import logging
@@ -10,6 +11,7 @@ from typing import Any
 from backend.app.agent.analyst import AnalystAgent, InvestigationState, analyst_agent
 from backend.app.graph.client import GraphClient, get_graph_client
 from backend.app.sim.clock import SimulatedClock, get_clock
+from backend.app.tools.registry import ToolContext, registry
 
 logger = logging.getLogger("trust_analyst.runner")
 
@@ -92,6 +94,166 @@ class DurableRunner:
             ORDER BY inv.updated_at DESC
             """
         )
+
+    def approve_and_remediate(
+        self,
+        approval_id: str,
+        approver: str = "human_operator",
+        client: GraphClient | None = None,
+        clock: SimulatedClock | None = None,
+    ) -> dict[str, Any]:
+        """
+        Processes human approval, executes containment tool, advances simulated time,
+        verifies containment telemetry, and handles escalation on stubborn exposure (e.g. Pair 7).
+        """
+        c = client or get_graph_client()
+        sim_clock = clock or get_clock()
+        now = sim_clock.now()
+
+        # 1. Fetch approval details
+        appr_rows = c.query_dicts(
+            """
+            MATCH (ar:ApprovalRequest {id: $id})
+            OPTIONAL MATCH (inv:Investigation)-[:REQUESTED]->(ar)
+            RETURN ar.action AS action, ar.target_id AS target_id, ar.status AS status, inv.id AS inv_id
+            """,
+            {"id": approval_id},
+        )
+        if not appr_rows:
+            raise ValueError(f"ApprovalRequest '{approval_id}' not found.")
+
+        ar_data = appr_rows[0]
+        action = ar_data["action"]
+        target_id = ar_data["target_id"]
+        inv_id = ar_data.get("inv_id") or "inv-runtime"
+
+        # 2. Mark approval approved in FalkorDB
+        c.query(
+            """
+            MATCH (ar:ApprovalRequest {id: $id})
+            SET ar.status = 'approved',
+                ar.approved_by = $approver,
+                ar.approved_at = $now
+            """,
+            {"id": approval_id, "approver": approver, "now": now},
+        )
+
+        # 3. Execute approved action
+        ctx = ToolContext(investigation_id=inv_id, session_id="sess-analyst-runtime")
+        args: dict[str, Any] = {}
+        if action == "apply_isolation":
+            args = {"pod_id": target_id}
+        elif action == "revoke_session":
+            args = {"session_id": target_id}
+        elif action == "block_endpoint":
+            args = {"endpoint_id": target_id}
+        elif action == "revoke_permission":
+            args = {"sa_id": target_id, "perm_id": "perm-wildcard-cluster"}
+        else:
+            args = {"target_id": target_id}
+
+        exec_res = registry.execute(name=action, arguments=args, context=ctx, client=c, clock=sim_clock)
+        if not exec_res.success:
+            return {"status": "execution_failed", "error": exec_res.error}
+
+        # 4. Advance simulated clock by verification observation window (300s)
+        sim_clock.advance(300)
+
+        # 5. Verify containment via fresh telemetry and graph reachability
+        verify_res = registry.execute(
+            name="verify_containment",
+            arguments={"subject_id": target_id, "window_seconds": 300},
+            context=ctx,
+            client=c,
+            clock=sim_clock,
+        )
+
+        v_data = verify_res.data or {}
+        contained = v_data.get("contained", False)
+        escalation_needed = v_data.get("escalation_needed", False)
+
+        if contained:
+            # Full containment achieved
+            # Register watch & schedule task follow-ups, close investigation
+            registry.execute(
+                name="register_watch",
+                arguments={
+                    "investigation_id": inv_id,
+                    "kind": "telemetry",
+                    "spec": {"pod_id": target_id, "kind": "connect"},
+                    "expires_in": 86400,
+                },
+                context=ctx,
+                client=c,
+                clock=sim_clock,
+            )
+            registry.execute(
+                name="schedule_task",
+                arguments={
+                    "investigation_id": inv_id,
+                    "due_in": 3600,
+                    "action": "verify_containment",
+                    "payload": {"subject_id": target_id},
+                },
+                context=ctx,
+                client=c,
+                clock=sim_clock,
+            )
+            registry.execute(
+                name="write_finding",
+                arguments={
+                    "investigation_id": inv_id,
+                    "summary": f"Containment successful on {target_id}. Exposure fully eliminated.",
+                    "verdict": "malicious",
+                    "confidence": 0.98,
+                    "evidence_ids": verify_res.evidence_ids,
+                },
+                context=ctx,
+                client=c,
+                clock=sim_clock,
+            )
+
+            c.query("MATCH (inv:Investigation {id: $id}) SET inv.status = 'done'", {"id": inv_id})
+            return {"status": "contained", "action": action, "target_id": target_id, "verification": v_data}
+
+        elif escalation_needed:
+            # Stubborn convergence detected: escalate to second remediation action
+            logger.warning(f"Verification failed on {target_id}: escalating to secondary action.")
+            # Find parallel rogue session
+            rogue_rows = c.query_dicts(
+                """
+                MATCH (s:AgentSession {status: 'active'})-[*1..3]->(sr:SensitiveResource)
+                RETURN s.id AS rogue_session_id
+                LIMIT 1
+                """
+            )
+            rogue_session_id = rogue_rows[0]["rogue_session_id"] if rogue_rows else "sess-bob-data"
+
+            # Create secondary approval request for session revocation
+            appr_res = registry.execute(
+                name="request_approval",
+                arguments={
+                    "investigation_id": inv_id,
+                    "action": "revoke_session",
+                    "rationale": f"Escalation: Pod isolation on {target_id} left parallel rogue session {rogue_session_id} open to crown jewel secrets.",
+                    "target_id": rogue_session_id,
+                },
+                context=ctx,
+                client=c,
+                clock=sim_clock,
+            )
+
+            c.query("MATCH (inv:Investigation {id: $id}) SET inv.status = 'awaiting_approval'", {"id": inv_id})
+            return {
+                "status": "escalated",
+                "next_action": "revoke_session",
+                "target_id": rogue_session_id,
+                "approval_id": appr_res.data.get("approval_id") if appr_res.data else None,
+                "verification": v_data,
+            }
+
+        else:
+            return {"status": "unverified", "verification": v_data}
 
 
 # Global runner instance

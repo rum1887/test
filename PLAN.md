@@ -75,14 +75,14 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
   - [x] Kill/resume mid-investigation test
   - [x] *Acceptance Gate:* Scenarios Pair 1 and Pair 3 reach correct ground-truth verdicts; cache recorded; kill/resume test passes.
 
-- [ ] **M7: Act-Verify-Watch-Schedule & Memory**
-  - [ ] Human approval workflow: `ApprovalRequest` nodes, pending/approved/rejected states
-  - [ ] Action execution: `apply_isolation`, `revoke_session`
-  - [ ] Verification with escalation: fresh telemetry check; triggers second action on stubborn convergence (Pair 7)
-  - [ ] Watch evaluator (`backend/app/agent/watcher.py`): graph pattern and telemetry watches evaluated on clock ticks
-  - [ ] Scheduler (`backend/app/agent/scheduler.py`): `ScheduledTask` nodes evaluated on clock ticks
-  - [ ] Semantic & procedural memory: `Baseline` updates, `Finding` records, `SIMILAR_TO` links
-  - [ ] *Acceptance Gate:* Pair 7 escalates correctly; a watch wakes an investigation on clock advance.
+- [x] **M7: Act-Verify-Watch-Schedule & Memory**
+  - [x] Human approval workflow: `ApprovalRequest` nodes, pending/approved/rejected states
+  - [x] Action execution: `apply_isolation`, `revoke_session`
+  - [x] Verification with escalation: fresh telemetry check; triggers second action on stubborn convergence (Pair 7)
+  - [x] Watch evaluator (`backend/app/agent/watcher.py`): graph pattern and telemetry watches evaluated on clock ticks
+  - [x] Scheduler (`backend/app/agent/scheduler.py`): `ScheduledTask` nodes evaluated on clock ticks
+  - [x] Semantic & procedural memory: `Baseline` updates, `Finding` records, `SIMILAR_TO` links
+  - [x] *Acceptance Gate:* Pair 7 escalates correctly; a watch wakes an investigation on clock advance.
 
 - [ ] **M8: Evaluation Harness & Benchmarks**
   - [ ] Baselines (`backend/app/eval/baselines.py`): B0 rule-based, B1 deterministic graph rules, B2 forensic tracer

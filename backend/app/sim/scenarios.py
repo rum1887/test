@@ -267,4 +267,7 @@ def apply_scenario(
 
     # 3. Raise Alert
     alert_id = raise_alert(client, scenario.alert, base_time)
+    alert_time = base_time + scenario.alert.at_offset
+    if sim_clock.now() < alert_time:
+        sim_clock.advance(alert_time - sim_clock.now())
     return alert_id
