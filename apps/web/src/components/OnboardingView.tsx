@@ -219,6 +219,36 @@ spec:
         </button>
       </div>
 
+      {/* Live Standalone External App Banner */}
+      <div className="bg-gradient-to-r from-purple-950/40 via-sky-950/40 to-blue-950/30 border border-purple-500/30 rounded-xl p-4 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-lg bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 font-bold text-sm shrink-0">
+            3001
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="font-bold text-sm text-white">Live External Agent Application Running</span>
+              <span className="text-[10px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded font-semibold">
+                ONLINE ON PORT 3001
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Experience the Runtime Trust Layer as a standalone security tool protecting an independent CRM agent. Test prompt injection with Guard ON vs Guard OFF.
+            </p>
+          </div>
+        </div>
+
+        <a
+          href="http://localhost:3001"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center space-x-1.5 transition cursor-pointer shadow shrink-0"
+        >
+          <span>Open Standalone App (Port 3001)</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </a>
+      </div>
+
       {/* Section 1: Multi-Application Registry */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
