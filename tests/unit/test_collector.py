@@ -70,4 +70,34 @@ def test_replay_mode_explicit_labeling():
     health = replay_collector.get_health()
     assert health.mode == "replay_synthetic"
     assert health.is_live is False
+    assert health.telemetry_provenance == "SYNTHETIC_REPLAY"
     assert health.total_events_ingested >= 2
+
+def test_default_sensor_unattached_reports_fixture_provenance():
+    """Verifies that an unattached sensor without a live daemon honestly reports fixture baseline."""
+    client = get_graph_client()
+    default_collector = RuntimeCollector(client)
+    health = default_collector.get_health()
+    assert health.is_live is False
+    assert health.daemon_attached is False
+    assert health.telemetry_provenance == "FIXTURE_BASELINE"
+    assert "No live eBPF kernel sensor" in (health.stale_warning or "")
+
+def test_sensor_health_with_live_daemon_env(monkeypatch):
+    """Verifies that setting EBPF_SENSOR_ATTACHED=true reports live kernel telemetry."""
+    monkeypatch.setenv("EBPF_SENSOR_ATTACHED", "true")
+    client = get_graph_client()
+    collector = RuntimeCollector(client)
+    health = collector.get_health()
+    assert health.is_live is True
+    assert health.daemon_attached is True
+    assert health.telemetry_provenance == "LIVE_KERNEL_TELEMETRY"
+
+def test_seeded_events_have_fixture_baseline_provenance():
+    """Verifies that seeded events in FalkorDB do not claim to be live eBPF telemetry."""
+    client = get_graph_client()
+    seed_scenarios(client)
+    rows = client.query("MATCH (e:RuntimeEvent {id: 'evt-ebpf-tetragon-8812'}) RETURN e.mode, e.source")
+    assert len(rows) == 1
+    assert rows[0][0] == "fixture_baseline"
+    assert rows[0][1] == "fixture_tetragon_baseline"

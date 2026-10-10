@@ -4,6 +4,7 @@
  */
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+const ADMIN_API_KEY = (import.meta as any).env?.VITE_ADMIN_API_KEY || 'trust-admin-secret-dev';
 
 export interface HealthResponse {
   status: 'HEALTHY' | 'DEGRADED';
@@ -16,8 +17,10 @@ export interface HealthResponse {
   };
   sensor: {
     sensor_name: string;
-    mode: 'live_ebpf' | 'live_enforcement' | string;
+    mode: 'live_ebpf' | 'live_enforcement' | 'fixture_baseline' | 'replay_synthetic' | string;
     is_live: boolean;
+    daemon_attached?: boolean;
+    telemetry_provenance?: string;
     last_event_timestamp: number | null;
     total_events_ingested: number;
     dropped_events_count: number;
@@ -105,6 +108,29 @@ export const api = {
 
   async getWorkloadDetail(id: string): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/api/workloads/${encodeURIComponent(id)}`);
+    return res.json();
+  },
+
+  async createWorkload(payload: {
+    name: string;
+    namespace?: string;
+    kind?: string;
+    replicas?: number;
+    service_account_name?: string;
+    cluster?: string;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/workloads`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Key': ADMIN_API_KEY,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
     return res.json();
   },
 
@@ -227,14 +253,20 @@ export const api = {
   },
 
   async resetGraph(): Promise<any> {
-    const res = await fetch(`${API_BASE_URL}/api/scenarios/reset`, { method: 'POST' });
+    const res = await fetch(`${API_BASE_URL}/api/scenarios/reset`, {
+      method: 'POST',
+      headers: { 'X-Admin-Key': ADMIN_API_KEY },
+    });
     return res.json();
   },
 
   async loadScenario(scenarioKey: string): Promise<any> {
     const res = await fetch(`${API_BASE_URL}/api/scenarios/load`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Key': ADMIN_API_KEY,
+      },
       body: JSON.stringify({ scenario_key: scenarioKey }),
     });
     return res.json();
@@ -299,7 +331,210 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/api/target-app/reset-session`, { method: 'POST' });
     return res.json();
   },
+
+  async getGatewayGuardState(): Promise<GatewayGuardStateResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/gateway/guard-state`);
+    return res.json();
+  },
+
+  async toggleGatewayGuard(enabled?: boolean): Promise<{ guard_enabled: boolean; mode: string; message: string }> {
+    const url = enabled !== undefined 
+      ? `${API_BASE_URL}/api/gateway/toggle-guard?enabled=${enabled}`
+      : `${API_BASE_URL}/api/gateway/toggle-guard`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-Admin-Key': ADMIN_API_KEY },
+    });
+    return res.json();
+  },
+
+  async getConnectedServices(): Promise<ConnectedServicesResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/gateway/connected-services`);
+    return res.json();
+  },
+
+  async getRecentGatewayDecisions(limit = 15): Promise<RecentGatewayDecisionsResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/gateway/recent-decisions?limit=${limit}`);
+    return res.json();
+  },
+
+  async resetGatewayQuarantine(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/gateway/reset-quarantine`, { method: 'POST' });
+    return res.json();
+  },
+
+  async getBlastRadiusStatus(): Promise<BlastRadiusStatusResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/gateway/blast-radius-status`);
+    return res.json();
+  },
+
+  async contaminateOrbit(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/gateway/contaminate-orbit`, { method: 'POST' });
+    return res.json();
+  },
+
+  async testNexusSettlement(payload?: { message?: string }): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/gateway/test-nexus-settlement`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {}),
+      });
+      return res.json();
+    } catch {
+      // Direct call fallback to port 3002
+      const res = await fetch('http://localhost:3002/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {
+          message: 'Execute scheduled treasury disbursement of $75,000.00 to vendor VEND-4491 for invoice INV-2026-9901.',
+        }),
+      });
+      return res.json();
+    }
+  },
+
+  async registerLiveService(url: string, serviceName?: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/gateway/register-live-service`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, service_name: serviceName }),
+    });
+    return res.json();
+  },
+
+  async getTrustStoreInventory(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/trust-store/inventory`);
+    return res.json();
+  },
+
+  async registerTrustStoreTool(payload: {
+    name: string;
+    description?: string;
+    mcp_server_id?: string;
+    risk_level?: string;
+    is_destructive?: boolean;
+    operation_type?: string;
+    target_resource_id?: string;
+    required_role?: string;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/trust-store/tools`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  async registerTrustStoreIdentity(payload: {
+    username: string;
+    full_name: string;
+    email: string;
+    role: string;
+    permissions: string[];
+    assign_agent_id?: string;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/trust-store/identities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
+
+  async scanAndReloadFleet(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/trust-store/scan-and-reload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    return res.json();
+  },
+
+  async firewallIntercept(payload: {
+    caller_identity: string;
+    agent_id: string;
+    tool_name: string;
+    parameters?: Record<string, any>;
+    action?: string;
+    enforce_mode?: boolean;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/trust-store/firewall-intercept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  },
 };
+
+export interface BlastRadiusStatusResponse {
+  shared_infrastructure: {
+    id: string;
+    name: string;
+    status: string;
+    shared_by: {
+      app: string;
+      port: number;
+      session_id: string;
+    }[];
+  };
+  orbit_agent: {
+    status: string;
+    active_threats_count: number;
+    threat_event_ids: string[];
+    session_id: string;
+  };
+  nexus_agent: {
+    status: string;
+    lateral_spread_blocked: boolean;
+    session_id: string;
+    action_on_shared_infra: string;
+  };
+}
+
+export interface GatewayGuardStateResponse {
+  guard_enabled: boolean;
+  mode: 'ENFORCE' | 'BYPASS';
+  status: 'ACTIVE_ENFORCEMENT' | 'AUDIT_ONLY';
+  quarantined_sessions_count: number;
+  is_quarantined: boolean;
+  enforcement_point: string;
+  last_updated?: number;
+}
+
+export interface ConnectedServiceItem {
+  id: string;
+  name: string;
+  role: string;
+  endpoint: string;
+  status: string;
+  protocol: string;
+  active_model?: string;
+  active_session?: string;
+  principal?: string;
+  governance?: string;
+  registered_tools?: string[];
+  crown_jewels?: { id: string; name: string; risk: string }[];
+  compliance?: string[];
+  latency_guarantee?: string;
+}
+
+export interface ConnectedServicesResponse {
+  guard_mode: string;
+  guard_enabled: boolean;
+  services: ConnectedServiceItem[];
+}
+
+export interface RecentGatewayDecisionsResponse {
+  total: number;
+  decisions: {
+    decision_id: string;
+    decision: string;
+    rationale: string;
+    evaluated_rules: string[];
+    timestamp: number;
+  }[];
+}
 
 export interface TargetAppState {
   application_name: string;

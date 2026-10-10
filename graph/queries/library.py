@@ -758,13 +758,13 @@ class QueryLibrary:
                 "event_type": e_type,
                 "timestamp": ts,
                 "severity": sev or "MEDIUM",
-                "mode": mode or "live_ebpf",
+                "mode": mode or "fixture_baseline",
                 "provenance": src or "sensor",
                 "process": proc,
                 "command": cmd,
                 "entity": {"id": s_id, "label": s_lbl} if s_id else None,
                 "policy_violation": {"id": pol_id, "name": pol_nm} if pol_id else None,
-                "verified": (mode == "live_ebpf"),
+                "verified": (mode in ["live_ebpf", "live_falco", "live_enforcement"]),
             })
 
         # Format policy decisions

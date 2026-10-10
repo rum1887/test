@@ -198,6 +198,22 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
         risk_level: 'CRITICAL',
         is_destructive: true
     }})
+    CREATE (tool_settle:Tool {{
+        id: 'tool-settlement-payout',
+        name: 'process_settlement_payout',
+        description: 'Process verified treasury payouts and settlement dispatches against financial ledger',
+        required_permissions: ['settlement_exec'],
+        risk_level: 'HIGH',
+        is_destructive: false
+    }})
+    CREATE (tool_treasury:Tool {{
+        id: 'tool-treasury-verify',
+        name: 'verify_treasury_ledger',
+        description: 'Verify financial ledger integrity and treasury balance checks',
+        required_permissions: ['treasury_read'],
+        risk_level: 'LOW',
+        is_destructive: false
+    }})
 
     CREATE (mcp_data)-[:CONTAINS]->(tool_audit)
     CREATE (mcp_data)-[:CONTAINS]->(tool_report)
@@ -206,6 +222,8 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
     CREATE (mcp_data)-[:CONTAINS]->(tool_bal)
     CREATE (mcp_data)-[:CONTAINS]->(tool_tx)
     CREATE (mcp_data)-[:CONTAINS]->(tool_vault)
+    CREATE (mcp_data)-[:CONTAINS]->(tool_settle)
+    CREATE (mcp_data)-[:CONTAINS]->(tool_treasury)
 
     CREATE (tool_dbquery)-[:CAN_ACCESS]->(sr_paydb)
     CREATE (tool_drop)-[:CAN_ACCESS]->(sr_findb)
@@ -216,6 +234,8 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
     CREATE (tool_vault)-[:CAN_ACCESS]->(sr_vault)
     CREATE (tool_vault)-[:PROTECTED_BY]->(pol_destructive)
     CREATE (tool_vault)-[:PROTECTED_BY]->(pol_delegation)
+    CREATE (tool_settle)-[:CAN_ACCESS]->(sr_findb)
+    CREATE (tool_treasury)-[:CAN_ACCESS]->(sr_findb)
     """
     client.query(core_seed)
 
@@ -290,12 +310,13 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
     CREATE (p_checkout)-[:CAN_REACH {{evidence: 'calico_network_policy_allow', confidence: 0.9, evidence_type: 'inferred'}}]->(ne_vault)
     CREATE (p_checkout)-[:CAN_REACH {{evidence: 'calico_network_policy_allow', confidence: 0.9, evidence_type: 'inferred'}}]->(ne_db)
 
-    // Suspicious Runtime Event (Live eBPF Tetragon Event)
+    // Suspicious Runtime Event (Fixture Baseline Tetragon Event)
     CREATE (e_shell:RuntimeEvent {{
         id: 'evt-ebpf-tetragon-8812',
         event_type: 'process_exec',
-        source: 'tetragon_ebpf',
-        mode: 'live_ebpf',
+        source: 'fixture_tetragon_baseline',
+        mode: 'fixture_baseline',
+        provenance: 'fixture_baseline',
         timestamp: {t_1m_ago},
         severity: 'CRITICAL',
         process_name: 'sh',
@@ -329,6 +350,8 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
     MATCH (tool_drop:Tool {{id: 'tool-db-drop'}})
     MATCH (tool_bal:Tool {{id: 'tool-cust-balance'}})
     MATCH (tool_tx:Tool {{id: 'tool-cust-tx'}})
+    MATCH (tool_settle:Tool {{id: 'tool-settlement-payout'}})
+    MATCH (tool_treasury:Tool {{id: 'tool-treasury-verify'}})
     MATCH (ep_mcp:EnforcementPoint {{id: 'ep-mcp-gateway-01'}})
     MATCH (pol_delegation:Policy {{id: 'pol-strict-delegation-bounds'}})
 
@@ -412,6 +435,81 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
     CREATE (s_alice)-[:CAN_INVOKE]->(tool_report)
     CREATE (s_alice)-[:CAN_INVOKE]->(tool_bal)
     CREATE (s_alice)-[:CAN_INVOKE]->(tool_tx)
+
+    // Second Multi-Agent Application: Nexus Autonomous Settlement Engine
+    CREATE (agent_nexus:Agent {{
+        id: 'agent-nexus-settlement',
+        name: 'Nexus-Settlement-Agent',
+        version: '2.11.0',
+        framework: 'Google ADK (Agent Development Kit v2.11)',
+        runtime: 'python3.14-adk',
+        role: 'Autonomous Corporate Settlement & Payroll Engine',
+        capabilities: ['process_settlement_payout', 'verify_treasury_ledger', 'get_transaction_history'],
+        max_autonomy_level: 'AUTONOMOUS',
+        status: 'ACTIVE'
+    }})
+
+    // Principal: Marcus Vance (Treasury & Settlement Director)
+    CREATE (p_marcus:Principal {{
+        id: 'principal-marcus',
+        name: 'Marcus Vance',
+        email: 'marcus.vance@example.com',
+        role: 'Treasury Operations Director',
+        department: 'Corporate Finance & Settlement',
+        auth_provider: 'okta_oidc',
+        status: 'ACTIVE',
+        valid_from: {t_past_1h},
+        valid_until: {t_future_1h}
+    }})
+    CREATE (perm_settle:Permission {{
+        id: 'perm-marcus-settle',
+        action: 'settlement_exec',
+        resource_pattern: 'financial/*',
+        effect: 'ALLOW'
+    }})
+    CREATE (perm_treasury:Permission {{
+        id: 'perm-marcus-treasury',
+        action: 'treasury_read',
+        resource_pattern: 'financial/*',
+        effect: 'ALLOW'
+    }})
+    CREATE (p_marcus)-[:HAS_PERMISSION]->(perm_settle)
+    CREATE (p_marcus)-[:HAS_PERMISSION]->(perm_treasury)
+    CREATE (p_marcus)-[:HAS_PERMISSION]->(perm_cust_read)
+
+    // Agent Session for Marcus on Nexus
+    CREATE (s_nexus:AgentSession {{
+        id: 'session-nexus-settlement-01',
+        principal_id: 'principal-marcus',
+        agent_id: 'agent-nexus-settlement',
+        session_token_hash: 'sha256:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b',
+        created_at: {t_5m_ago},
+        expires_at: {t_future_1h},
+        status: 'ACTIVE',
+        audience: 'mcp-data-server'
+    }})
+
+    // Explicit Delegation from Marcus to Nexus Agent
+    CREATE (del_marcus:Delegation {{
+        id: 'del-marcus-nexus-01',
+        principal_id: 'principal-marcus',
+        agent_id: 'agent-nexus-settlement',
+        session_id: 'session-nexus-settlement-01',
+        scopes: ['process_settlement_payout', 'verify_treasury_ledger', 'get_transaction_history'],
+        constraints: 'corporate_treasury_dispatch',
+        issued_at: {t_5m_ago},
+        expires_at: {t_future_1h},
+        status: 'ACTIVE',
+        delegation_depth: 1
+    }})
+
+    CREATE (p_marcus)-[:OWNS_SESSION]->(s_nexus)
+    CREATE (s_nexus)-[:ACTS_ON_BEHALF_OF]->(p_marcus)
+    CREATE (p_marcus)-[:DELEGATES_TO]->(del_marcus)
+    CREATE (del_marcus)-[:DELEGATES_TO]->(agent_nexus)
+    CREATE (s_nexus)-[:CAN_INVOKE]->(tool_settle)
+    CREATE (s_nexus)-[:CAN_INVOKE]->(tool_treasury)
+    CREATE (s_nexus)-[:CAN_INVOKE]->(tool_tx)
 
     // Deterministic Policy Decision: Blocked Tool Call
     CREATE (dec_block_drop:PolicyDecision {{
@@ -552,8 +650,9 @@ def seed_scenarios(client: GraphClient, scenario: str = "ALL") -> Dict[str, Any]
     CREATE (e_stale:RuntimeEvent {{
         id: 'evt-stale-telemetry-001',
         event_type: 'process_exec',
-        source: 'tetragon_ebpf',
-        mode: 'live_ebpf',
+        source: 'fixture_tetragon_baseline',
+        mode: 'fixture_baseline',
+        provenance: 'fixture_baseline',
         timestamp: {now_ts - 1200},
         severity: 'LOW',
         process_name: 'python3',

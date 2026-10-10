@@ -2,12 +2,23 @@
 Kubernetes Workload & Pod Inventory Routes.
 """
 
-from fastapi import APIRouter, HTTPException, Path
-from typing import Dict, Any, List
+import re
+from fastapi import APIRouter, HTTPException, Path, Depends
+from typing import Dict, Any, List, Optional
+from pydantic import BaseModel, Field
 from graph.client import get_graph_client
 from graph.queries.library import QueryLibrary
+from apps.api.dependencies.auth import verify_admin_key
 
 router = APIRouter(tags=["Workload Explorer"])
+
+class CreateWorkloadRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    namespace: str = Field("trust-lab", min_length=2, max_length=63)
+    kind: str = Field("Deployment", pattern="^(Deployment|StatefulSet|DaemonSet|Job)$")
+    replicas: int = Field(1, ge=1, le=50)
+    service_account_name: Optional[str] = None
+    cluster: str = Field("aws-eks-production-us-east-1", max_length=100)
 
 @router.get("/api/workloads")
 def list_workloads() -> List[Dict[str, Any]]:
@@ -104,4 +115,78 @@ def get_workload_detail(workload_id: str = Path(..., description="ID of workload
             "reachable_resources_count": blast["reachable_resources_count"],
             "sensitive_targets": blast["targets"],
         },
+    }
+
+@router.post("/api/workloads")
+def create_workload(
+    req: CreateWorkloadRequest,
+    _admin: str = Depends(verify_admin_key),
+) -> Dict[str, Any]:
+    """
+    Dynamically registers and provisions a new Kubernetes Workload in the FalkorDB graph.
+    Requires administrative key authorization.
+    """
+    client = get_graph_client()
+    slug = re.sub(r"[^a-z0-9-]", "-", req.name.lower()).strip("-")
+    if not slug:
+        slug = "custom-app"
+    w_id = f"workload-{slug}"
+
+    # Check if workload already exists
+    existing = client.query("MATCH (w:Workload {id: $wid}) RETURN w.id", {"wid": w_id})
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Workload with id '{w_id}' already exists")
+
+    sa_name = req.service_account_name or f"{slug}-sa"
+    sa_id = f"sa-{slug}"
+    pod_id = f"pod-{slug}-01"
+    pod_name = f"{slug}-7f89b-xk01"
+
+    create_q = """
+    CREATE (w:Workload {
+        id: $w_id,
+        name: $w_name,
+        namespace: $namespace,
+        kind: $kind,
+        status: 'ACTIVE',
+        replicas: $replicas,
+        cluster: $cluster
+    })
+    CREATE (p:Pod {
+        id: $pod_id,
+        name: $pod_name,
+        namespace: $namespace,
+        status: 'RUNNING'
+    })
+    MERGE (sa:ServiceAccount {id: $sa_id})
+    ON CREATE SET sa.name = $sa_name, sa.namespace = $namespace
+    CREATE (w)-[:CONTAINS]->(p)
+    CREATE (p)-[:RUNS_AS]->(sa)
+    """
+    client.query(create_q, {
+        "w_id": w_id,
+        "w_name": req.name,
+        "namespace": req.namespace,
+        "kind": req.kind,
+        "replicas": req.replicas,
+        "cluster": req.cluster,
+        "pod_id": pod_id,
+        "pod_name": pod_name,
+        "sa_id": sa_id,
+        "sa_name": sa_name,
+    })
+
+    return {
+        "status": "CREATED",
+        "workload": {
+            "id": w_id,
+            "name": req.name,
+            "namespace": req.namespace,
+            "kind": req.kind,
+            "status": "ACTIVE",
+            "replicas": req.replicas,
+            "cluster": req.cluster,
+            "pods": [{"id": pod_id, "name": pod_name}],
+            "service_account": {"id": sa_id, "name": sa_name},
+        }
     }

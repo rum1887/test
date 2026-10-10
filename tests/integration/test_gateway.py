@@ -12,10 +12,14 @@ from services.agent_gateway.gateway import (
 )
 from policies.rules import DecisionEffect
 
-@pytest.fixture(scope="module")
-def gateway():
+@pytest.fixture(autouse=True)
+def reset_baseline():
     client = get_graph_client()
     seed_scenarios(client)
+
+@pytest.fixture
+def gateway():
+    client = get_graph_client()
     return AgentMCPGateway(client)
 
 def test_gateway_allows_authorized_tool(gateway):

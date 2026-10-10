@@ -92,7 +92,12 @@ def main():
     # Reset graph to clean baseline state
     print(f"{DIM}Resetting graph state to clean baseline...{RESET}", end="", flush=True)
     try:
-        reset_req = urllib.request.Request("http://localhost:8000/api/scenarios/reset", data=b"", headers={"Content-Type": "application/json"})
+        admin_key = os.getenv("ADMIN_API_KEY", "trust-admin-secret-dev")
+        reset_req = urllib.request.Request(
+            "http://localhost:8000/api/scenarios/reset",
+            data=b"",
+            headers={"Content-Type": "application/json", "X-Admin-Key": admin_key},
+        )
         with urllib.request.urlopen(reset_req) as r:
             pass
         print(f" {GREEN}Ready.{RESET}\n")

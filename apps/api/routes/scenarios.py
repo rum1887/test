@@ -3,8 +3,9 @@ Scenario Loader and Graph State Reset Routes.
 Supports Scenarios A through E with deterministic reproducibility.
 """
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Depends
 from typing import Dict, Any, List
+from apps.api.dependencies.auth import verify_admin_key
 from graph.client import get_graph_client
 from graph.fixtures.seeder import seed_scenarios
 
@@ -58,7 +59,7 @@ def list_scenarios() -> List[Dict[str, Any]]:
     """Returns catalog of reproducible demonstration scenarios."""
     return SCENARIOS_META
 
-@router.post("/api/scenarios/reset")
+@router.post("/api/scenarios/reset", dependencies=[Depends(verify_admin_key)])
 def reset_graph_state() -> Dict[str, Any]:
     """
     Clears the entire FalkorDB graph and re-seeds deterministic state for all scenarios.
@@ -71,7 +72,7 @@ def reset_graph_state() -> Dict[str, Any]:
         "details": res,
     }
 
-@router.post("/api/scenarios/load")
+@router.post("/api/scenarios/load", dependencies=[Depends(verify_admin_key)])
 def load_scenario(scenario_key: str = Body("ALL", embed=True)) -> Dict[str, Any]:
     """
     Loads deterministic graph state for a specified scenario.

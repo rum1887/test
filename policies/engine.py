@@ -169,8 +169,44 @@ class PolicyEngine:
                 f"Session '{session_id}' has {threat_count} active critical security events; locked in quarantine."
             )
 
+        # Rule 7: Graph Blast-Radius & Shared Infrastructure Contamination Check
+        blast_shared_query = """
+        MATCH (t:Tool {name: $tool})-[:CAN_ACCESS]->(sr:SensitiveResource)
+        WHERE sr.status IN ['QUARANTINED', 'CONTAINED']
+        RETURN sr.name AS resource_name, 'EXPLICIT_RESOURCE_QUARANTINE' AS peer_session, 'CONTAINMENT_ACTIVE' AS evt_id
+        UNION
+        MATCH (t:Tool {name: $tool})-[:CAN_ACCESS]->(sr:SensitiveResource)
+        MATCH (other_t:Tool)-[:CAN_ACCESS]->(sr)
+        MATCH (other_s:AgentSession)-[:CAN_INVOKE]->(other_t)
+        MATCH (other_s)-[:EMITTED_EVENT]->(e:RuntimeEvent)
+        WHERE other_s.id <> $sid AND e.severity IN ['HIGH', 'CRITICAL']
+        RETURN sr.name AS resource_name, other_s.id AS peer_session, e.id AS evt_id
+        """
+        try:
+            blast_rows = self.client.query(blast_shared_query, {"tool": requested_tool, "sid": session_id})
+        except Exception:
+            blast_rows = []
+
+        shared_clean = (len(blast_rows) == 0)
+        peer_sources = [r[1] for r in blast_rows] if blast_rows else []
+        sr_targets = list({r[0] for r in blast_rows}) if blast_rows else []
+
+        rule_results.append(
+            RuleResult(
+                rule_id="POL_BLAST_RADIUS_SHARED_CONTAINMENT",
+                rule_name="Blast-Radius Shared Infrastructure Isolation",
+                passed=shared_clean,
+                description="Target infrastructure must not be contaminated by peer agent sessions within graph blast radius",
+                remediation="Isolate compromised peer agent, clear session quarantine, and restore shared ledger boundary",
+            )
+        )
+        if not shared_clean:
+            fail_reasons.append(
+                f"BLAST RADIUS CONTAINMENT: Target shared infrastructure '{', '.join(sr_targets)}' is quarantined due to upstream contamination in peer agent session '{', '.join(peer_sources)}'. Pre-emptive containment active to protect downstream fleet."
+            )
+
         # Determine Final Decision Effect
-        if not threat_clean:
+        if not threat_clean or not shared_clean:
             decision = DecisionEffect.RESTRICT
             rationale = "RESTRICT: " + "; ".join(fail_reasons)
         elif fail_reasons:

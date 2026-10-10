@@ -55,6 +55,39 @@ def test_workload_inventory_and_detail(api_client):
     assert detail["id"] == w_id
     assert "blast_radius" in detail
 
+def test_create_workload_lifecycle_and_auth(api_client):
+    """POST /api/workloads enforces admin auth and provisions workload in FalkorDB."""
+    # 1. Missing auth -> 401
+    unauth_res = api_client.post("/api/workloads", json={"name": "test-dynamic-svc"})
+    assert unauth_res.status_code == 401
+
+    # 2. Valid admin key -> 200 CREATED
+    headers = {"X-Admin-Key": "trust-admin-secret-dev"}
+    create_res = api_client.post(
+        "/api/workloads",
+        json={"name": "test-dynamic-svc", "namespace": "trust-lab", "kind": "Deployment", "replicas": 2},
+        headers=headers,
+    )
+    assert create_res.status_code == 200
+    data = create_res.json()
+    assert data["status"] == "CREATED"
+    assert data["workload"]["id"] == "workload-test-dynamic-svc"
+    assert data["workload"]["replicas"] == 2
+
+    # 3. Duplicate creation -> 409 Conflict
+    dup_res = api_client.post(
+        "/api/workloads",
+        json={"name": "test-dynamic-svc"},
+        headers=headers,
+    )
+    assert dup_res.status_code == 409
+
+    # 4. Verified in list_workloads
+    list_res = api_client.get("/api/workloads")
+    assert list_res.status_code == 200
+    w_ids = [w["id"] for w in list_res.json()]
+    assert "workload-test-dynamic-svc" in w_ids
+
 def test_blast_radius_api(api_client):
     """GET /api/blast-radius returns computed traversal."""
     res = api_client.get("/api/blast-radius?target_id=workload-checkout")
@@ -126,12 +159,20 @@ def test_gateway_invoke_api_blocked(api_client):
     assert data["blocked"] is True
 
 def test_scenarios_reset_and_load(api_client):
-    """POST /api/scenarios/reset and GET /api/scenarios."""
+    """POST /api/scenarios/reset requires authentication; succeeds with valid key."""
     list_res = api_client.get("/api/scenarios")
     assert list_res.status_code == 200
     assert len(list_res.json()) >= 5
 
-    reset_res = api_client.post("/api/scenarios/reset")
+    # Unauthenticated reset must be rejected
+    unauth_res = api_client.post("/api/scenarios/reset")
+    assert unauth_res.status_code == 401
+
+    # Authenticated reset succeeds
+    reset_res = api_client.post(
+        "/api/scenarios/reset",
+        headers={"X-Admin-Key": "trust-admin-secret-dev"},
+    )
     assert reset_res.status_code == 200
     assert reset_res.json()["status"] == "RESET_SUCCESSFUL"
 

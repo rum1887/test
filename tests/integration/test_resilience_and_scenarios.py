@@ -108,3 +108,56 @@ def test_scenario_e_fail_closed_during_outage():
     assert res.decision.decision == DecisionEffect.DENY
     assert "FAIL-CLOSED" in res.decision.rationale
     assert res.execution_result is None
+
+def test_scenario_f_multi_agent_shared_infra_blast_radius_containment():
+    """
+    Scenario F: Multi-Agent Shared Infrastructure Blast-Radius Isolation.
+    Orbit (session-alice-dev-01) and Nexus (session-nexus-settlement-01) share sr-financial-db.
+    1. Before contamination: Nexus calls process_settlement_payout -> ALLOW (200).
+    2. Orbit suffers prompt injection / attack -> creates CRITICAL RuntimeEvent on session-alice-dev-01.
+    3. Nexus attempts process_settlement_payout on shared sr-financial-db.
+    4. Trust Layer intercepts Nexus with 428 PRECONDITION_REQUIRED / RESTRICT via Rule POL_BLAST_RADIUS_SHARED_CONTAINMENT!
+    5. Downstream fleet and shared ledger are protected from lateral contamination.
+    """
+    client = get_graph_client()
+    gw = AgentMCPGateway(client)
+
+    # 1. Nexus settlement is initially allowed
+    req_nexus = ToolInvocationRequest(
+        session_id="session-nexus-settlement-01",
+        tool_name="process_settlement_payout",
+        action="EXECUTE",
+        parameters={"payout_id": "pay-101", "amount": "$50,000.00"},
+    )
+    res_clean = gw.invoke_tool(req_nexus)
+    assert res_clean.blocked is False
+    assert res_clean.status_code == 200
+
+    # 2. Contaminate Orbit (session-alice-dev-01) with a CRITICAL breach event
+    client.query("""
+    MATCH (s:AgentSession {id: 'session-alice-dev-01'})
+    CREATE (e:RuntimeEvent {
+        id: 'evt-orbit-prompt-injection-test',
+        event_type: 'GOAL_HIJACKING_ATTEMPT',
+        severity: 'CRITICAL',
+        timestamp: 1791613000.0,
+        command_line: 'Prompt injection attempting KMS vault dump'
+    })
+    CREATE (s)-[:EMITTED_EVENT]->(e)
+    """)
+
+    # 3. Nexus now tries to call the shared tool
+    res_blocked = gw.invoke_tool(req_nexus)
+    assert res_blocked.blocked is True
+    assert res_blocked.status_code == 428  # Precondition Required / Restrict
+    assert res_blocked.decision.decision == DecisionEffect.RESTRICT
+    assert "BLAST RADIUS CONTAINMENT" in res_blocked.decision.rationale
+    assert "session-alice-dev-01" in res_blocked.decision.rationale
+    assert "prod-financial-db" in res_blocked.decision.rationale
+
+    # 4. Clear threat on Orbit and reset quarantine -> Nexus is immediately unblocked
+    client.query("MATCH (e:RuntimeEvent) WHERE e.id STARTS WITH 'evt-sec-' OR e.id STARTS WITH 'evt-orbit-' DETACH DELETE e")
+    res_restored = gw.invoke_tool(req_nexus)
+    assert res_restored.blocked is False
+    assert res_restored.status_code == 200
+

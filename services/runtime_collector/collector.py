@@ -9,6 +9,7 @@ Correlates events with Kubernetes workloads and enforces policy checks.
 import hashlib
 import json
 import logging
+import os
 import time
 import uuid
 from typing import Any, Dict, List, Optional
@@ -21,8 +22,8 @@ logger = logging.getLogger("trustlayer.collector")
 class NormalizedRuntimeEvent(BaseModel):
     id: str = Field(default_factory=lambda: f"evt-{uuid.uuid4().hex[:12]}")
     event_type: str  # process_exec, process_kprobe, sock_connect, file_access
-    source: str  # tetragon_ebpf, falco, replay_simulator
-    mode: str = "live_ebpf"  # live_ebpf OR replay_synthetic
+    source: str  # tetragon_ebpf, falco, replay_simulator, fixture_seeder
+    mode: str = "fixture_baseline"  # live_ebpf, live_falco, live_enforcement, fixture_baseline, replay_synthetic
     timestamp: float = Field(default_factory=time.time)
     severity: str = "MEDIUM"  # CRITICAL, HIGH, MEDIUM, LOW, INFO
     process_name: Optional[str] = None
@@ -39,9 +40,11 @@ class NormalizedRuntimeEvent(BaseModel):
     raw_payload: Optional[Dict[str, Any]] = None
 
 class SensorHealth(BaseModel):
-    sensor_name: str = "runtime_gateway_sensor"
-    mode: str = "live_enforcement"
-    is_live: bool = True
+    sensor_name: str = "runtime_trust_sensor"
+    mode: str = "fixture_baseline"
+    is_live: bool = False
+    daemon_attached: bool = False
+    telemetry_provenance: str = "FIXTURE_BASELINE"  # FIXTURE_BASELINE | LIVE_KERNEL_TELEMETRY | SYNTHETIC_REPLAY
     last_event_timestamp: Optional[float] = None
     total_events_ingested: int = 0
     dropped_events_count: int = 0
@@ -51,18 +54,51 @@ class SensorHealth(BaseModel):
 class RuntimeCollector:
     """Normalizes, correlates, and persists telemetry into FalkorDB."""
 
-    def __init__(self, client: GraphClient, default_mode: str = "live_enforcement"):
+    def __init__(self, client: GraphClient, default_mode: str = "fixture_baseline"):
         self.client = client
-        self.mode = default_mode  # 'live_enforcement' or 'live_ebpf'
+        self.mode = default_mode  # 'fixture_baseline', 'live_ebpf', 'replay_synthetic', 'live_enforcement'
         self.total_ingested = 0
         self.dropped_events = 0
         self.last_event_time: Optional[float] = None
+        self.last_live_event_time: Optional[float] = None
+
+    def _is_daemon_attached(self) -> bool:
+        """
+        Verifies if an actual eBPF daemon (Tetragon/Falco) or live kernel sensor is attached.
+        Checks:
+        1. EBPF_SENSOR_ATTACHED environment variable == 'true' / '1'
+        2. Presence of sensor Unix domain socket (e.g., /var/run/tetragon/tetragon.sock)
+        3. Real live kernel events ingested within the last 60 seconds
+        """
+        if os.getenv("EBPF_SENSOR_ATTACHED", "").lower() in ("true", "1", "yes"):
+            return True
+        sock_path = os.getenv("EBPF_DAEMON_SOCKET", "/var/run/tetragon/tetragon.sock")
+        if os.path.exists(sock_path):
+            return True
+        if self.last_live_event_time and (time.time() - self.last_live_event_time) < 60:
+            return True
+        return False
 
     def get_health(self) -> SensorHealth:
-        """Returns health status of runtime telemetry pipeline."""
+        """Returns verified health status of runtime telemetry pipeline."""
         now = time.time()
         is_stale = False
         warning = None
+
+        daemon_attached = self._is_daemon_attached()
+        is_live = daemon_attached
+
+        if daemon_attached:
+            prov = "LIVE_KERNEL_TELEMETRY"
+            current_mode = "live_ebpf" if self.mode == "fixture_baseline" else self.mode
+        elif self.mode == "replay_synthetic":
+            prov = "SYNTHETIC_REPLAY"
+            current_mode = "replay_synthetic"
+            warning = "Synthetic telemetry stream generated for simulation."
+        else:
+            prov = "FIXTURE_BASELINE"
+            current_mode = self.mode if self.mode != "live_ebpf" else "fixture_baseline"
+            warning = "No live eBPF kernel sensor daemon attached; running in fixture baseline mode."
 
         if self.last_event_time is not None and (now - self.last_event_time) > 3600:
             is_stale = True
@@ -71,8 +107,10 @@ class RuntimeCollector:
 
         return SensorHealth(
             sensor_name="runtime_trust_sensor",
-            mode=self.mode,
-            is_live=(self.mode != "replay_synthetic"),
+            mode=current_mode,
+            is_live=is_live,
+            daemon_attached=daemon_attached,
+            telemetry_provenance=prov,
             last_event_timestamp=self.last_event_time or now,
             total_events_ingested=self.total_ingested,
             dropped_events_count=self.dropped_events,
@@ -106,7 +144,7 @@ class RuntimeCollector:
         return NormalizedRuntimeEvent(
             event_type="process_exec",
             source="tetragon_ebpf",
-            mode=self.mode,
+            mode="live_ebpf" if self.mode == "fixture_baseline" else self.mode,
             timestamp=time.time(),
             severity=severity,
             process_name=p_name,
@@ -194,6 +232,8 @@ class RuntimeCollector:
 
             self.total_ingested += 1
             self.last_event_time = event.timestamp
+            if event.mode in ["live_ebpf", "live_falco"]:
+                self.last_live_event_time = event.timestamp
 
             return {
                 "success": True,

@@ -14,7 +14,7 @@ collector = RuntimeCollector(get_graph_client())
 @router.get("/api/events")
 def get_events(
     severity: Optional[str] = Query(None, description="Filter by severity: CRITICAL, HIGH, MEDIUM, LOW"),
-    mode: Optional[str] = Query(None, description="Filter by mode: live_ebpf, replay_synthetic"),
+    mode: Optional[str] = Query(None, description="Filter by mode: fixture_baseline, live_ebpf, replay_synthetic, live_enforcement"),
     limit: int = Query(50, ge=1, le=200),
 ) -> List[Dict[str, Any]]:
     """
@@ -56,14 +56,27 @@ def get_events(
     LIMIT $limit
     """
     rows = client.query(query, params)
+    sensor_health = collector.get_health()
 
     events = []
     for r in rows:
+        evt_mode = r[3]
+        is_live = (evt_mode in ["live_ebpf", "live_falco"]) and sensor_health.is_live
+        if evt_mode in ["live_ebpf", "live_falco"]:
+            prov = "LIVE_KERNEL" if sensor_health.is_live else "HISTORICAL_KERNEL"
+        elif evt_mode == "replay_synthetic":
+            prov = "SYNTHETIC_REPLAY"
+        elif evt_mode == "live_enforcement":
+            prov = "GATEWAY_ENFORCEMENT"
+        else:
+            prov = "FIXTURE_BASELINE"
+
         events.append({
             "id": r[0],
             "event_type": r[1],
             "source": r[2],
-            "mode": r[3],
+            "mode": evt_mode,
+            "telemetry_provenance": prov,
             "timestamp": r[4],
             "severity": r[5],
             "process_name": r[6],
@@ -71,7 +84,7 @@ def get_events(
             "evidence_hash": r[8],
             "correlated_source": {"id": r[9], "label": r[10]} if r[9] else None,
             "policy_violation": {"id": r[11], "name": r[12]} if r[11] else None,
-            "is_live_telemetry": (r[3] == "live_ebpf"),
+            "is_live_telemetry": is_live,
         })
 
     return events

@@ -24,6 +24,7 @@ from apps.api.routes.scenarios import router as scenarios_router
 from apps.api.routes.audit import router as audit_router
 from apps.api.routes.compliance import router as compliance_router
 from apps.api.routes.target_app import router as target_app_router
+from apps.api.routes.trust_store import router as trust_store_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,6 +84,7 @@ app.include_router(scenarios_router)
 app.include_router(audit_router)
 app.include_router(compliance_router)
 app.include_router(target_app_router)
+app.include_router(trust_store_router)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

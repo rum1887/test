@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Compass,
   Shield,
   Layers,
   RotateCcw,
@@ -7,6 +8,10 @@ import {
   Building,
   Zap,
   Code2,
+  Server,
+  Network,
+  Activity,
+  CheckCircle2,
 } from 'lucide-react';
 import { HealthResponse } from '../api/client';
 
@@ -38,97 +43,109 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isHealthy = health?.database?.healthy ?? true;
 
   const navItems = [
-    { id: 'target-app', label: '🎯 Target App & Live Attack', icon: Zap },
-    { id: 'graph', label: '🌐 Security Trust Graph', icon: Layers },
-    { id: 'onboarding', label: '🚀 Onboard Your Application', icon: Code2 },
-    { id: 'compliance', label: '🛡️ Audit & Compliance Log', icon: ShieldCheck },
+    { id: 'trust-store', label: 'Trust Store & Living Graph', icon: Layers, featured: true },
+    { id: 'ai-firewall', label: 'AI Firewall (Runtime Interceptor)', icon: Shield, featured: true },
+    { id: 'story', label: 'Story Walkthrough', icon: Compass },
+    { id: 'graph', label: 'Raw Cytoscape Graph', icon: Network },
+    { id: 'containment', label: 'Lateral Containment', icon: Zap },
+    { id: 'compliance', label: 'Compliance Audit', icon: ShieldCheck },
   ];
 
   return (
-    <header className="bg-[#090e1c] border-b border-[#18233c] sticky top-0 z-50">
-      {/* Top Clean Header Bar */}
+    <header className="bg-[#faf7f0] border-b border-[#ded7c8] sticky top-0 z-50 shadow-2xs">
+      {/* Top Header Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
           {/* Left: Brand Identity */}
           <div className="flex items-center space-x-3 shrink-0">
-            <div className="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shadow-sm">
-              <Shield className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-stone-900 text-stone-100 flex items-center justify-center shadow-sm">
+              <ShieldCheck className="w-5 h-5 text-stone-100" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-bold text-base tracking-tight text-white">Runtime Trust Layer</span>
-                <span className="text-[10px] font-mono uppercase bg-sky-950 text-sky-300 border border-sky-800 px-1.5 py-0.5 rounded font-semibold">
+                <span className="font-semibold text-base tracking-tight text-stone-900">
+                  Runtime Trust Layer
+                </span>
+                <span className="text-[10px] font-mono uppercase bg-[#ede7da] text-stone-800 px-1.5 py-0.5 rounded font-semibold border border-[#ded7c8]">
                   CONTROL PLANE
                 </span>
               </div>
-              <div className="flex items-center space-x-1.5 text-[11px] text-slate-400 mt-0.5">
-                <Building className="w-3 h-3 text-slate-500" />
-                <span className="text-slate-300 font-medium">Acme Corp</span>
-                <span className="text-slate-500">&bull;</span>
-                <span className="font-mono text-sky-400">aws-eks-production [us-east-1]</span>
+              <div className="flex items-center space-x-1.5 text-[11px] text-stone-600 mt-0.5">
+                <Building className="w-3 h-3 text-stone-500" />
+                <span className="text-stone-800 font-medium">Acme Corp</span>
+                <span className="text-stone-400">&bull;</span>
+                <span className="font-mono text-stone-600">aws-eks-production [us-east-1]</span>
               </div>
             </div>
           </div>
 
-          {/* Center: Clean Active Application & Enforcement Badge */}
-          <div className="hidden md:flex items-center space-x-2.5 bg-[#0e162a] border border-[#1e2c4a] rounded-lg px-3.5 py-1.5 text-xs shadow-inner">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-slate-400 font-medium">Protected App:</span>
-            <span className="text-white font-semibold">Apex FinTech Banking Assistant</span>
-            <span className="text-slate-600">&bull;</span>
-            <span className="text-sky-400 font-mono text-[11px]">Pre-Execution Gateway Active</span>
+          {/* Center: Live Enforcement Badge */}
+          <div className="hidden lg:flex items-center space-x-2.5 bg-[#f5f0e8] border border-[#ded7c8] rounded-lg px-3.5 py-1.5 text-xs shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="text-stone-600 font-medium">Active Fleet:</span>
+            <span className="text-stone-900 font-semibold">Orbit (:3001)</span>
+            <span className="text-stone-400">&bull;</span>
+            <span className="text-stone-800 font-mono text-[11px]">Nexus (:3002)</span>
+            <span className="text-stone-400">&bull;</span>
+            <span className="text-stone-800 font-mono text-[11px]">MCP (:8443)</span>
           </div>
 
           {/* Right: Status, Reset, User Profile */}
           <div className="flex items-center space-x-3 shrink-0">
-            {/* Connection Status Indicator */}
-            <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-[#10192e] border border-[#1b2a47] text-xs">
-              <span className={`w-2 h-2 rounded-full ${isHealthy ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span className="text-slate-300 font-mono text-[11px]">FalkorDB Online</span>
+            {/* Status Indicator */}
+            <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-[#f5f0e8] border border-[#ded7c8] text-xs shadow-2xs">
+              <span className={`w-2 h-2 rounded-full ${isHealthy ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <span className="text-stone-800 font-mono text-[11px]">FalkorDB Online</span>
             </div>
 
-            {/* Reset Scenario Button */}
+            {/* Reset Button */}
             <button
               onClick={handleResetClick}
               disabled={resetting}
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-md bg-[#151f33] hover:bg-[#1d2b47] border border-[#233557] text-slate-300 hover:text-white text-xs font-medium transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-[#f5f0e8] hover:bg-[#ede7da] border border-[#ded7c8] text-stone-800 hover:text-stone-900 text-xs font-medium transition disabled:opacity-50 cursor-pointer shadow-2xs"
               title="Reset graph baseline state"
             >
-              <RotateCcw className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`} />
+              <RotateCcw className={`w-3.5 h-3.5 text-stone-600 ${resetting ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Reset Baseline</span>
             </button>
 
             {/* User Avatar */}
-            <div className="flex items-center space-x-2 pl-2 border-l border-[#1b253b]">
-              <div className="w-7 h-7 rounded-full bg-sky-600/20 border border-sky-500/40 flex items-center justify-center text-[11px] font-bold text-sky-300">
+            <div className="flex items-center space-x-2 pl-2 border-l border-[#ded7c8]">
+              <div className="w-7 h-7 rounded-full bg-[#ede7da] border border-[#ded7c8] flex items-center justify-center text-[11px] font-bold text-stone-800">
                 AH
               </div>
-              <div className="hidden lg:block text-left text-[11px] leading-tight">
-                <div className="font-semibold text-slate-200">Alice Henderson</div>
-                <div className="text-[10px] text-slate-400 font-mono">Okta SSO (SecOps)</div>
+              <div className="hidden md:block text-left text-[11px] leading-tight">
+                <div className="font-semibold text-stone-800">Alice Henderson</div>
+                <div className="text-[10px] text-stone-500 font-mono">SecOps Director</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Primary Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-[#141e33]">
-        <nav className="flex space-x-2 py-1.5">
+      {/* Navigation Tabs Bar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-[#ded7c8]">
+        <nav className="flex space-x-1.5 py-2 overflow-x-auto no-scrollbar">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = currentTab === item.id;
+            const active =
+              currentTab === item.id ||
+              (item.id === 'control-plane' && currentTab === 'connected-services') ||
+              (item.id === 'data-plane' && currentTab === 'policies');
+
             return (
               <button
                 key={item.id}
                 onClick={() => setCurrentTab(item.id)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition cursor-pointer ${
                   active
-                    ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#10192e]'
+                    ? 'bg-stone-900 text-white shadow-sm'
+                    : item.featured
+                    ? 'bg-[#ede7da] hover:bg-[#e4dcce] text-stone-900 border border-[#ded7c8] font-semibold'
+                    : 'text-stone-700 hover:text-stone-900 hover:bg-[#ede7da] border border-transparent'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${active ? 'text-sky-400' : 'text-slate-500'}`} />
+                <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-stone-600'}`} />
                 <span>{item.label}</span>
               </button>
             );

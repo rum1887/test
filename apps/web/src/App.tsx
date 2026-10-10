@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
+import { ConnectedServicesView } from './components/ConnectedServicesView';
 import { TargetAppView } from './components/TargetAppView';
 import { OnboardingView } from './components/OnboardingView';
 import { OverviewView } from './components/OverviewView';
@@ -11,10 +12,15 @@ import { EventsView } from './components/EventsView';
 import { PolicyDecisionsView } from './components/PolicyDecisionsView';
 import { ContainmentView } from './components/ContainmentView';
 import { ComplianceView } from './components/ComplianceView';
+import { StoryModeView } from './components/StoryModeView';
+import { TrustStoreView } from './components/TrustStoreView';
+import { AIFirewallView } from './components/AIFirewallView';
 import { api, HealthResponse, StatsResponse, CytoscapeNode, CytoscapeEdge } from './api/client';
 
 export function App() {
-  const [currentTab, setCurrentTab] = useState<string>('target-app');
+  const [currentTab, setCurrentTab] = useState<string>('trust-store');
+  const [firewallTool, setFirewallTool] = useState<string>('lookup_customer_balance');
+  const [firewallCaller, setFirewallCaller] = useState<string>('principal-alice');
   const [currentScenario, setCurrentScenario] = useState<string>('B');
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [stats, setStats] = useState<StatsResponse | null>(null);
@@ -88,7 +94,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-200 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#f5f0e8] text-stone-800 flex flex-col font-sans">
       <Navbar
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
@@ -100,16 +106,45 @@ export function App() {
 
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#0d1322] border border-sky-500/80 text-sky-200 text-xs px-4 py-2.5 rounded-lg shadow-2xl flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+        <div className="fixed bottom-6 right-6 z-50 bg-stone-900 border border-stone-700 text-stone-100 text-xs px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Main View Area */}
       <main className="flex-1">
+        {currentTab === 'trust-store' && (
+          <TrustStoreView
+            onNavigateToFirewall={(toolName, identityId) => {
+              if (toolName) setFirewallTool(toolName);
+              if (identityId) setFirewallCaller(identityId);
+              setCurrentTab('ai-firewall');
+            }}
+          />
+        )}
+
+        {currentTab === 'ai-firewall' && (
+          <AIFirewallView
+            initialTool={firewallTool}
+            initialCaller={firewallCaller}
+          />
+        )}
+
+        {currentTab === 'story' && (
+          <StoryModeView onNavigateToTab={(tabId) => setCurrentTab(tabId)} />
+        )}
+
+        {(currentTab === 'control-plane' || currentTab === 'connected-services') && (
+          <ConnectedServicesView />
+        )}
+
         {currentTab === 'target-app' && (
           <TargetAppView onNavigateToGraph={() => setCurrentTab('graph')} />
+        )}
+
+        {(currentTab === 'data-plane' || currentTab === 'policies') && (
+          <PolicyDecisionsView />
         )}
 
         {currentTab === 'onboarding' && <OnboardingView />}
@@ -153,8 +188,6 @@ export function App() {
         )}
 
         {currentTab === 'events' && <EventsView />}
-
-        {currentTab === 'policies' && <PolicyDecisionsView />}
 
         {currentTab === 'containment' && (
           <ContainmentView initialSourceId={containmentTargetId} />

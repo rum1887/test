@@ -57,19 +57,19 @@ export const GraphView: React.FC<GraphViewProps> = ({
       container: containerRef.current,
       elements: [...filteredNodes, ...filteredEdges],
       style: [
-        // Base Node Style
+        // Base Node Style (Light Warm Theme)
         {
           selector: 'node',
           style: {
             label: 'data(name)',
-            color: '#e2e8f0',
+            color: '#292524',
             'font-size': '11px',
             'font-family': 'Plus Jakarta Sans, sans-serif',
             'text-valign': 'bottom',
             'text-margin-y': 6,
-            'background-color': '#334155',
+            'background-color': '#e7e5e0',
             'border-width': 2,
-            'border-color': '#1e293b',
+            'border-color': '#d6d2c7',
             width: 32,
             height: 32,
           },
@@ -79,17 +79,19 @@ export const GraphView: React.FC<GraphViewProps> = ({
           selector: 'node[label = "Workload"]',
           style: {
             'background-color': '#0284c7',
-            'border-color': '#38bdf8',
+            'border-color': '#0369a1',
             shape: 'round-rectangle',
             width: 38,
             height: 38,
+            color: '#0c4a6e',
+            'font-weight': 'bold',
           },
         },
         {
           selector: 'node[label = "Pod"]',
           style: {
-            'background-color': '#0369a1',
-            'border-color': '#7dd3fc',
+            'background-color': '#38bdf8',
+            'border-color': '#0284c7',
             shape: 'ellipse',
             width: 30,
             height: 30,
@@ -99,18 +101,20 @@ export const GraphView: React.FC<GraphViewProps> = ({
         {
           selector: 'node[label = "Principal"]',
           style: {
-            'background-color': '#9333ea',
-            'border-color': '#c084fc',
+            'background-color': '#a855f7',
+            'border-color': '#7e22ce',
             shape: 'diamond',
             width: 38,
             height: 38,
+            color: '#581c87',
+            'font-weight': 'bold',
           },
         },
         {
           selector: 'node[label = "Agent"]',
           style: {
-            'background-color': '#db2777',
-            'border-color': '#f472b6',
+            'background-color': '#d946ef',
+            'border-color': '#a21caf',
             shape: 'round-diamond',
             width: 36,
             height: 36,
@@ -119,8 +123,8 @@ export const GraphView: React.FC<GraphViewProps> = ({
         {
           selector: 'node[label = "AgentSession"]',
           style: {
-            'background-color': '#e11d48',
-            'border-color': '#fb7185',
+            'background-color': '#f43f5e',
+            'border-color': '#be123c',
             shape: 'round-rectangle',
             width: 28,
             height: 28,
@@ -129,8 +133,8 @@ export const GraphView: React.FC<GraphViewProps> = ({
         {
           selector: 'node[label = "Tool"]',
           style: {
-            'background-color': '#2563eb',
-            'border-color': '#60a5fa',
+            'background-color': '#3b82f6',
+            'border-color': '#1d4ed8',
             shape: 'round-triangle',
             width: 30,
             height: 30,
@@ -140,22 +144,22 @@ export const GraphView: React.FC<GraphViewProps> = ({
         {
           selector: 'node[label = "SensitiveResource"]',
           style: {
-            'background-color': '#dc2626',
-            'border-color': '#f87171',
+            'background-color': '#ef4444',
+            'border-color': '#b91c1c',
             'border-width': 3,
             shape: 'star',
             width: 44,
             height: 44,
             'font-weight': 'bold',
-            color: '#fca5a5',
+            color: '#991b1b',
           },
         },
         // Runtime Events
         {
           selector: 'node[label = "RuntimeEvent"]',
           style: {
-            'background-color': '#d97706',
-            'border-color': '#fbbf24',
+            'background-color': '#f59e0b',
+            'border-color': '#b45309',
             shape: 'triangle',
             width: 28,
             height: 28,
@@ -165,8 +169,8 @@ export const GraphView: React.FC<GraphViewProps> = ({
         {
           selector: 'node[label = "Policy"]',
           style: {
-            'background-color': '#059669',
-            'border-color': '#34d399',
+            'background-color': '#10b981',
+            'border-color': '#047857',
             shape: 'tag',
             width: 32,
             height: 32,
@@ -175,8 +179,8 @@ export const GraphView: React.FC<GraphViewProps> = ({
         {
           selector: 'node[label = "EnforcementPoint"]',
           style: {
-            'background-color': '#475569',
-            'border-color': '#94a3b8',
+            'background-color': '#64748b',
+            'border-color': '#334155',
             shape: 'hexagon',
             width: 34,
             height: 34,
@@ -187,20 +191,20 @@ export const GraphView: React.FC<GraphViewProps> = ({
           selector: 'edge',
           style: {
             width: 1.5,
-            'line-color': '#475569',
-            'target-arrow-color': '#475569',
+            'line-color': '#a8a29e',
+            'target-arrow-color': '#a8a29e',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
             'arrow-scale': 0.8,
             label: 'data(label)',
             'font-size': '8px',
             'font-family': 'JetBrains Mono, monospace',
-            color: '#64748b',
+            color: '#78716c',
             'text-rotation': 'autorotate',
             'text-margin-y': -8,
           },
         },
-        // Edge: Inferred Reachability (Dashed Cyan)
+        // Edge: Inferred Reachability
         {
           selector: 'edge[evidence_type = "inferred"]',
           style: {
@@ -209,22 +213,22 @@ export const GraphView: React.FC<GraphViewProps> = ({
             'target-arrow-color': '#0284c7',
           },
         },
-        // Edge: Observed Telemetry (Emerald)
+        // Edge: Observed Telemetry
         {
           selector: 'edge[evidence_type = "observed"]',
           style: {
-            'line-color': '#10b981',
-            'target-arrow-color': '#10b981',
+            'line-color': '#059669',
+            'target-arrow-color': '#059669',
             width: 2.2,
           },
         },
-        // Edge: Simulated Containment (Dotted Amber)
+        // Edge: Simulated Containment
         {
           selector: 'edge[evidence_type = "simulated"]',
           style: {
             'line-style': 'dotted',
-            'line-color': '#f59e0b',
-            'target-arrow-color': '#f59e0b',
+            'line-color': '#d97706',
+            'target-arrow-color': '#d97706',
           },
         },
         // Node selection highlight
@@ -232,24 +236,24 @@ export const GraphView: React.FC<GraphViewProps> = ({
           selector: ':selected',
           style: {
             'border-width': 4,
-            'border-color': '#facc15',
-          },
+            'border-color': '#b45309',
+            'border-opacity': 1,
+          } as any,
         },
       ],
       layout: {
         name: layoutName,
-        animate: false,
-        padding: 50,
-      },
+        animate: true,
+        animationDuration: 500,
+        padding: 40,
+      } as any,
     });
 
-    // Handle node selection click
     cy.on('tap', 'node', (evt) => {
-      const node = evt.target;
-      setSelectedNode(node.data());
+      const nodeData = evt.target.data();
+      setSelectedNode(nodeData);
     });
 
-    // Deselect click on canvas background
     cy.on('tap', (evt) => {
       if (evt.target === cy) {
         setSelectedNode(null);
@@ -261,12 +265,13 @@ export const GraphView: React.FC<GraphViewProps> = ({
     return () => {
       cy.destroy();
     };
-  }, [nodes, edges, layoutName, activeFilter]);
+  }, [nodes, edges, activeFilter, layoutName]);
 
-  // Handle Search Query Highlight
+  // Handle Search Filtering
   useEffect(() => {
-    if (!cyRef.current) return;
     const cy = cyRef.current;
+    if (!cy) return;
+
     if (!searchQuery.trim()) {
       cy.nodes().style('opacity', 1);
       cy.edges().style('opacity', 1);
@@ -280,7 +285,7 @@ export const GraphView: React.FC<GraphViewProps> = ({
       if (name.includes(q) || id.includes(q) || label.includes(q)) {
         node.style('opacity', 1);
       } else {
-        node.style('opacity', 0.2);
+        node.style('opacity', 0.15);
       }
     });
   }, [searchQuery]);
@@ -290,7 +295,7 @@ export const GraphView: React.FC<GraphViewProps> = ({
   const handleFit = () => cyRef.current?.fit(undefined, 40);
 
   return (
-    <div className="relative w-full h-[calc(100vh-106px)] bg-[#070b14] overflow-hidden flex">
+    <div className="relative w-full h-[calc(100vh-106px)] bg-[#fbfaf8] overflow-hidden flex font-sans">
       {/* Main Cytoscape Canvas */}
       <div className="flex-1 relative h-full">
         <div ref={containerRef} className="w-full h-full" />
@@ -298,25 +303,25 @@ export const GraphView: React.FC<GraphViewProps> = ({
         {/* Floating Top Controls (Search & Category Filters) */}
         <div className="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-2">
           {/* Search Input */}
-          <div className="flex items-center bg-[#0d1322]/90 backdrop-blur border border-[#1e2942] rounded-md px-2.5 py-1.5 text-xs text-slate-200 shadow-lg">
-            <Search className="w-3.5 h-3.5 text-slate-400 mr-2" />
+          <div className="flex items-center bg-white/95 backdrop-blur border border-[#e8e5de] rounded-lg px-3 py-1.5 text-xs text-stone-800 shadow-sm">
+            <Search className="w-3.5 h-3.5 text-stone-400 mr-2" />
             <input
               type="text"
               placeholder="Search graph nodes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent focus:outline-none w-44 placeholder-slate-500"
+              className="bg-transparent focus:outline-none w-44 placeholder-stone-400"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-white">
+              <button onClick={() => setSearchQuery('')} className="text-stone-400 hover:text-stone-700">
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex items-center space-x-1 bg-[#0d1322]/90 backdrop-blur border border-[#1e2942] rounded-md p-1 text-xs shadow-lg">
-            <Filter className="w-3 h-3 text-slate-400 ml-1.5 mr-1" />
+          <div className="flex items-center space-x-1 bg-white/95 backdrop-blur border border-[#e8e5de] rounded-lg p-1 text-xs shadow-sm">
+            <Filter className="w-3 h-3 text-stone-400 ml-1.5 mr-1" />
             {[
               { id: 'ALL', label: 'All' },
               { id: 'WORKLOAD', label: 'Workloads' },
@@ -330,8 +335,8 @@ export const GraphView: React.FC<GraphViewProps> = ({
                 onClick={() => setActiveFilter(f.id)}
                 className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
                   activeFilter === f.id
-                    ? 'bg-sky-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-stone-900 text-white shadow-sm'
+                    : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 {f.label}
@@ -341,50 +346,50 @@ export const GraphView: React.FC<GraphViewProps> = ({
         </div>
 
         {/* Floating Bottom-Left Controls (Zoom, Fit, Layout) */}
-        <div className="absolute bottom-4 left-4 z-10 flex items-center space-x-2 bg-[#0d1322]/90 backdrop-blur border border-[#1e2942] rounded-md p-1 shadow-lg">
+        <div className="absolute bottom-4 left-4 z-10 flex items-center space-x-2 bg-white/95 backdrop-blur border border-[#e8e5de] rounded-lg p-1 shadow-sm">
           <button
             onClick={handleZoomIn}
-            className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-[#192540] transition"
+            className="p-1.5 text-stone-600 hover:text-stone-900 rounded hover:bg-stone-100 transition cursor-pointer"
             title="Zoom In"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={handleZoomOut}
-            className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-[#192540] transition"
+            className="p-1.5 text-stone-600 hover:text-stone-900 rounded hover:bg-stone-100 transition cursor-pointer"
             title="Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <button
             onClick={handleFit}
-            className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-[#192540] transition"
+            className="p-1.5 text-stone-600 hover:text-stone-900 rounded hover:bg-stone-100 transition cursor-pointer"
             title="Fit to Canvas"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
-          <div className="h-4 w-[1px] bg-[#1e2942] mx-1" />
+          <div className="h-4 w-[1px] bg-stone-200 mx-1" />
           <select
             value={layoutName}
             onChange={(e) => setLayoutName(e.target.value as any)}
-            className="bg-transparent text-slate-300 text-xs focus:outline-none cursor-pointer pr-1"
+            className="bg-transparent text-stone-700 text-xs focus:outline-none cursor-pointer pr-1"
             title="Change Layout Algorithm"
           >
-            <option value="cose" className="bg-[#0d1322]">COSE Physics</option>
-            <option value="concentric" className="bg-[#0d1322]">Concentric Rings</option>
-            <option value="breadthfirst" className="bg-[#0d1322]">Hierarchy Tree</option>
-            <option value="grid" className="bg-[#0d1322]">Grid</option>
+            <option value="cose">COSE Physics</option>
+            <option value="concentric">Concentric Rings</option>
+            <option value="breadthfirst">Hierarchy Tree</option>
+            <option value="grid">Grid</option>
           </select>
         </div>
 
         {/* Graph Legend Overlay */}
-        <div className="absolute bottom-4 right-4 z-10 hidden sm:flex items-center space-x-3 bg-[#0d1322]/90 backdrop-blur border border-[#1e2942] rounded-md px-3 py-1.5 text-[11px] text-slate-400 shadow-lg">
+        <div className="absolute bottom-4 right-4 z-10 hidden sm:flex items-center space-x-3 bg-white/95 backdrop-blur border border-[#e8e5de] rounded-lg px-3 py-1.5 text-[11px] text-stone-600 shadow-sm">
           <div className="flex items-center space-x-1">
             <span className="w-2.5 h-2.5 rounded bg-sky-500" />
             <span>Workload</span>
           </div>
           <div className="flex items-center space-x-1">
-            <span className="w-2.5 h-2.5 rounded bg-pink-500" />
+            <span className="w-2.5 h-2.5 rounded bg-purple-500" />
             <span>Agent</span>
           </div>
           <div className="flex items-center space-x-1">
@@ -395,16 +400,16 @@ export const GraphView: React.FC<GraphViewProps> = ({
             <span className="w-2.5 h-2.5 rounded bg-amber-500" />
             <span>Event</span>
           </div>
-          <div className="flex items-center space-x-1 border-l border-slate-700 pl-2">
-            <span className="w-3 h-0.5 border-t border-slate-400" />
+          <div className="flex items-center space-x-1 border-l border-stone-200 pl-2">
+            <span className="w-3 h-0.5 border-t border-stone-400" />
             <span>Configured</span>
           </div>
           <div className="flex items-center space-x-1">
-            <span className="w-3 h-0.5 border-t border-dashed border-sky-400" />
+            <span className="w-3 h-0.5 border-t border-dashed border-sky-500" />
             <span>Inferred</span>
           </div>
           <div className="flex items-center space-x-1">
-            <span className="w-3 h-0.5 border-t border-emerald-400" />
+            <span className="w-3 h-0.5 border-t border-emerald-600" />
             <span>Observed</span>
           </div>
         </div>
@@ -412,20 +417,20 @@ export const GraphView: React.FC<GraphViewProps> = ({
 
       {/* Selected Node Details Drawer */}
       {selectedNode && (
-        <aside className="w-96 bg-[#0d1322] border-l border-[#1e2942] h-full overflow-y-auto p-5 shadow-2xl z-20 flex flex-col justify-between">
+        <aside className="w-96 bg-white border-l border-[#e8e5de] h-full overflow-y-auto p-5 shadow-xl z-20 flex flex-col justify-between">
           <div>
-            <div className="flex items-start justify-between pb-3 border-b border-[#1e2942]">
+            <div className="flex items-start justify-between pb-3 border-b border-stone-100">
               <div>
-                <span className="text-[10px] font-mono uppercase bg-[#1a253e] text-sky-300 border border-sky-800/60 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-mono uppercase bg-stone-100 text-stone-700 border border-stone-200 px-1.5 py-0.5 rounded font-semibold">
                   {selectedNode.label}
                 </span>
-                <h3 className="text-base font-semibold text-white mt-1.5 truncate">
+                <h3 className="text-base font-semibold text-stone-900 mt-1.5 truncate">
                   {selectedNode.name}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedNode(null)}
-                className="text-slate-400 hover:text-white p-1 rounded hover:bg-[#1a253e]"
+                className="text-stone-400 hover:text-stone-700 p-1 rounded hover:bg-stone-100 transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -434,32 +439,32 @@ export const GraphView: React.FC<GraphViewProps> = ({
             {/* Properties List */}
             <div className="mt-4 space-y-3 text-xs">
               <div>
-                <span className="text-slate-400 block font-mono text-[11px]">ID</span>
-                <span className="font-mono text-slate-200 select-all bg-[#121a2d] px-1.5 py-0.5 rounded block mt-0.5">
+                <span className="text-stone-500 block font-mono text-[11px]">ID</span>
+                <span className="font-mono text-stone-800 select-all bg-[#faf8f5] px-2 py-1 rounded block mt-0.5 border border-[#ede9df]">
                   {selectedNode.id}
                 </span>
               </div>
 
               {selectedNode.status && (
-                <div className="flex justify-between items-center py-1 border-b border-[#151f33]">
-                  <span className="text-slate-400">Status</span>
-                  <span className="font-mono text-emerald-400 font-medium">{selectedNode.status}</span>
+                <div className="flex justify-between items-center py-1.5 border-b border-stone-100">
+                  <span className="text-stone-500">Status</span>
+                  <span className="font-mono text-emerald-700 font-semibold">{selectedNode.status}</span>
                 </div>
               )}
 
               {selectedNode.sensitivity && selectedNode.sensitivity !== 'NONE' && (
-                <div className="flex justify-between items-center py-1 border-b border-[#151f33]">
-                  <span className="text-slate-400">Sensitivity</span>
-                  <span className="font-mono font-bold text-rose-400 bg-rose-950/60 border border-rose-800/60 px-1.5 py-0.5 rounded">
+                <div className="flex justify-between items-center py-1.5 border-b border-stone-100">
+                  <span className="text-stone-500">Sensitivity</span>
+                  <span className="font-mono font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
                     {selectedNode.sensitivity}
                   </span>
                 </div>
               )}
 
               {selectedNode.severity && selectedNode.severity !== 'NONE' && (
-                <div className="flex justify-between items-center py-1 border-b border-[#151f33]">
-                  <span className="text-slate-400">Severity</span>
-                  <span className="font-mono font-bold text-amber-400 bg-amber-950/60 border border-amber-800/60 px-1.5 py-0.5 rounded">
+                <div className="flex justify-between items-center py-1.5 border-b border-stone-100">
+                  <span className="text-stone-500">Severity</span>
+                  <span className="font-mono font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
                     {selectedNode.severity}
                   </span>
                 </div>
@@ -467,8 +472,8 @@ export const GraphView: React.FC<GraphViewProps> = ({
 
               {selectedNode.command_line && (
                 <div className="mt-2">
-                  <span className="text-slate-400 block font-mono text-[11px]">Command Line</span>
-                  <pre className="font-mono text-[11px] bg-[#121a2d] p-2 rounded text-slate-300 mt-1 overflow-x-auto border border-[#1e2942]">
+                  <span className="text-stone-500 block font-mono text-[11px]">Command Line</span>
+                  <pre className="font-mono text-[11px] bg-[#faf8f5] p-2 rounded text-stone-800 mt-1 overflow-x-auto border border-[#ede9df]">
                     {selectedNode.command_line}
                   </pre>
                 </div>
@@ -477,11 +482,11 @@ export const GraphView: React.FC<GraphViewProps> = ({
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="mt-6 pt-4 border-t border-[#1e2942] space-y-2">
+          <div className="mt-6 pt-4 border-t border-stone-100 space-y-2">
             {onSelectNodeForBlastRadius && (selectedNode.label === 'Workload' || selectedNode.label === 'Pod') && (
               <button
                 onClick={() => onSelectNodeForBlastRadius(selectedNode.id)}
-                className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-semibold transition cursor-pointer"
+                className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-medium transition cursor-pointer"
               >
                 <span>Analyze Blast Radius</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -491,9 +496,9 @@ export const GraphView: React.FC<GraphViewProps> = ({
             {onSelectNodeForContainment && (
               <button
                 onClick={() => onSelectNodeForContainment(selectedNode.id)}
-                className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-[#192540] hover:bg-[#223154] text-slate-200 border border-[#2b3c66] rounded text-xs font-semibold transition cursor-pointer"
+                className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-white hover:bg-stone-50 text-stone-700 border border-stone-300 rounded-lg text-xs font-medium transition cursor-pointer"
               >
-                <Shield className="w-3.5 h-3.5 text-amber-400" />
+                <Shield className="w-3.5 h-3.5 text-stone-500" />
                 <span>Simulate Containment</span>
               </button>
             )}

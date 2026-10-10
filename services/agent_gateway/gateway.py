@@ -34,6 +34,21 @@ class ToolInvocationResponse(BaseModel):
     error: Optional[str] = None
     evidence_hash: Optional[str] = None
 
+GLOBAL_GUARD_CONFIG = {
+    "guard_enabled": True,
+    "mode": "ENFORCE",
+    "last_updated": time.time(),
+}
+
+def get_guard_config() -> Dict[str, Any]:
+    return GLOBAL_GUARD_CONFIG
+
+def set_guard_config(enabled: bool) -> Dict[str, Any]:
+    GLOBAL_GUARD_CONFIG["guard_enabled"] = enabled
+    GLOBAL_GUARD_CONFIG["mode"] = "ENFORCE" if enabled else "BYPASS"
+    GLOBAL_GUARD_CONFIG["last_updated"] = time.time()
+    return GLOBAL_GUARD_CONFIG
+
 class AgentMCPGateway:
     """Gateway boundary for all Agent Tool calls."""
 
@@ -44,6 +59,7 @@ class AgentMCPGateway:
     def invoke_tool(self, request: ToolInvocationRequest) -> ToolInvocationResponse:
         """
         Enforces security policy BEFORE tool execution.
+        Respects central control plane guard mode (ENFORCE vs BYPASS).
         """
         now_ts = time.time()
         tool_name = request.tool_name
@@ -104,21 +120,42 @@ class AgentMCPGateway:
             requested_action=request.action,
         )
 
-        # 3. If NOT ALLOW: Record in graph and BLOCK immediately
-        if decision.decision != DecisionEffect.ALLOW:
-            self._record_decision_in_graph(decision, request.session_id, blocked=True)
+        guard_enabled = GLOBAL_GUARD_CONFIG.get("guard_enabled", True)
 
-            status_code = 403 if decision.decision == DecisionEffect.DENY else 428
-            logger.warning(
-                f"[ENFORCEMENT BLOCKED] Session '{request.session_id}' calling '{tool_name}' blocked: {decision.rationale}"
-            )
-            return ToolInvocationResponse(
-                success=False,
-                blocked=True,
-                status_code=status_code,
-                decision=decision,
-                error=f"Enforcement point rejected request: {decision.rationale}",
-            )
+        # 3. If NOT ALLOW: Check central guard enforcement mode
+        if decision.decision != DecisionEffect.ALLOW:
+            if guard_enabled:
+                # ENFORCE MODE: Intercept & block immediately
+                self._record_decision_in_graph(decision, request.session_id, blocked=True)
+
+                status_code = 403 if decision.decision == DecisionEffect.DENY else 428
+                logger.warning(
+                    f"[ENFORCEMENT BLOCKED] Session '{request.session_id}' calling '{tool_name}' blocked: {decision.rationale}"
+                )
+                return ToolInvocationResponse(
+                    success=False,
+                    blocked=True,
+                    status_code=status_code,
+                    decision=decision,
+                    error=f"Enforcement point rejected request: {decision.rationale}",
+                )
+            else:
+                # BYPASS MODE: SecOps set audit mode, permit raw execution
+                self._record_decision_in_graph(decision, request.session_id, blocked=False)
+                logger.warning(
+                    f"[ENFORCEMENT BYPASSED] Session '{request.session_id}' calling '{tool_name}' executed in BYPASS mode: {decision.rationale}"
+                )
+                exec_result, evidence_hash = self._execute_live_tool(tool_name, request.parameters)
+                self._record_observed_access(request.session_id, tool_name, evidence_hash)
+                return ToolInvocationResponse(
+                    success=True,
+                    blocked=False,
+                    status_code=200,
+                    decision=decision,
+                    execution_result=exec_result,
+                    evidence_hash=evidence_hash,
+                    error="BYPASS_MODE: Policy violation permitted by central SecOps control plane.",
+                )
 
         # 4. If ALLOW: Record decision and execute live tool against database
         self._record_decision_in_graph(decision, request.session_id, blocked=False)

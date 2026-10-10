@@ -43,11 +43,11 @@ export const EventsView: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-            <Terminal className="w-5 h-5 text-emerald-400" />
+          <h2 className="text-xl font-bold text-stone-900 flex items-center space-x-2">
+            <Terminal className="w-5 h-5 text-stone-700" />
             <span>Runtime Telemetry & Observed Events</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-stone-500 mt-1">
             Real-time process execution, kernel probes, and socket telemetry correlated with Kubernetes workloads.
           </p>
         </div>
@@ -56,7 +56,7 @@ export const EventsView: React.FC = () => {
           <button
             onClick={loadEvents}
             disabled={loading}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-sky-950 hover:bg-sky-900 border border-sky-800 text-sky-300 rounded text-xs font-semibold transition cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded text-xs font-semibold transition cursor-pointer shadow-sm"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh Live Stream</span>
@@ -65,17 +65,17 @@ export const EventsView: React.FC = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 bg-[#0d1322] border border-[#1e2942] rounded-lg p-3 text-xs">
+      <div className="flex flex-wrap items-center gap-3 bg-white border border-[#e8e5de] shadow-sm rounded-lg p-3 text-xs">
         <div className="flex items-center space-x-2">
-          <span className="text-slate-400">Severity:</span>
+          <span className="text-stone-500 font-medium">Severity:</span>
           {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((s) => (
             <button
               key={s}
               onClick={() => setSeverityFilter(s)}
               className={`px-2 py-0.5 rounded text-[11px] font-mono font-medium transition cursor-pointer ${
                 severityFilter === s
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:text-slate-200 bg-[#12192b]'
+                  ? 'bg-stone-900 text-white'
+                  : 'text-stone-600 hover:text-stone-900 bg-[#faf8f5] border border-[#ede9df]'
               }`}
             >
               {s}
@@ -83,80 +83,99 @@ export const EventsView: React.FC = () => {
           ))}
         </div>
 
-        <div className="h-4 w-[1px] bg-[#1e2942] mx-2 hidden sm:block" />
+        <div className="h-4 w-[1px] bg-[#e8e5de] mx-2 hidden sm:block" />
 
         <div className="flex items-center space-x-2">
-          <span className="text-slate-400">Telemetry Source:</span>
-          {['ALL', 'live_ebpf', 'live_enforcement'].map((m) => (
+          <span className="text-stone-500 font-medium">Telemetry Source:</span>
+          {[
+            { id: 'ALL', label: 'All Telemetry' },
+            { id: 'fixture_baseline', label: 'Fixture Baseline' },
+            { id: 'live_ebpf', label: 'Kernel eBPF' },
+            { id: 'live_enforcement', label: 'Agent Gateway' },
+            { id: 'replay_synthetic', label: 'Synthetic Replay' },
+          ].map((item) => (
             <button
-              key={m}
-              onClick={() => setModeFilter(m)}
+              key={item.id}
+              onClick={() => setModeFilter(item.id)}
               className={`px-2 py-0.5 rounded text-[11px] font-mono transition cursor-pointer ${
-                modeFilter === m
-                  ? 'bg-emerald-600 text-white'
-                  : 'text-slate-400 hover:text-slate-200 bg-[#12192b]'
+                modeFilter === item.id
+                  ? 'bg-stone-900 text-white font-medium'
+                  : 'text-stone-600 hover:text-stone-900 bg-[#faf8f5] border border-[#ede9df]'
               }`}
             >
-              {m === 'live_ebpf' ? 'Kernel eBPF' : m === 'live_enforcement' ? 'Agent Gateway' : 'All Telemetry'}
+              {item.label}
             </button>
           ))}
         </div>
       </div>
 
       {/* Events Table */}
-      <div className="bg-[#0d1322] border border-[#1e2942] rounded-xl overflow-hidden shadow-lg">
-        <div className="divide-y divide-[#151f33]">
+      <div className="bg-white border border-[#e8e5de] rounded-xl overflow-hidden shadow-sm">
+        <div className="divide-y divide-[#f0ede6]">
           {events.map((e) => {
             const isCritical = e.severity === 'CRITICAL';
-            const isLiveEbpf = e.mode === 'live_ebpf';
+            const isLive = e.is_live_telemetry;
+            const modeLabel =
+              e.mode === 'live_ebpf'
+                ? isLive ? 'KERNEL eBPF (LIVE)' : 'KERNEL eBPF (HISTORICAL)'
+                : e.mode === 'live_enforcement'
+                ? 'AGENT GATEWAY'
+                : e.mode === 'replay_synthetic'
+                ? 'SYNTHETIC REPLAY'
+                : 'FIXTURE BASELINE';
+
+            const badgeColor =
+              e.mode === 'live_ebpf' && isLive
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : e.mode === 'replay_synthetic'
+                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                : e.mode === 'live_enforcement'
+                ? 'bg-purple-50 text-purple-800 border-purple-200'
+                : 'bg-stone-100 text-stone-700 border-stone-200';
 
             return (
-              <div key={e.id} className="p-4 space-y-2 hover:bg-[#121a2d] transition">
+              <div key={e.id} className="p-4 space-y-2 hover:bg-[#faf8f5] transition">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center space-x-2">
                     <span
                       className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold ${
                         isCritical
-                          ? 'bg-rose-950 text-rose-300 border border-rose-800'
-                          : 'bg-amber-950 text-amber-300 border border-amber-800'
+                          ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200'
                       }`}
                     >
                       {e.severity}
                     </span>
 
                     <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded ${
-                        isLiveEbpf
-                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                          : 'bg-sky-950 text-sky-300 border border-sky-800'
-                      }`}
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded border ${badgeColor}`}
                     >
-                      {isLiveEbpf ? 'KERNEL eBPF' : 'LIVE GATEWAY'}
+                      {modeLabel}
                     </span>
 
-                    <span className="font-mono text-xs font-semibold text-white">
+                    <span className="font-mono text-xs font-semibold text-stone-900">
                       {e.process_name || e.event_type}
                     </span>
                   </div>
 
-                  <span className="text-[11px] font-mono text-slate-400">
+                  <span className="text-[11px] font-mono text-stone-400">
                     {e.timestamp ? new Date(e.timestamp * 1000).toLocaleTimeString() : 'N/A'}
                   </span>
                 </div>
 
                 {e.command_line && (
-                  <div className="bg-[#090e1a] border border-[#1e2942] rounded p-2 font-mono text-[11px] text-slate-300 overflow-x-auto">
+                  <div className="bg-[#faf8f5] border border-[#ede9df] rounded p-2 font-mono text-[11px] text-stone-800 overflow-x-auto">
                     {e.command_line}
                   </div>
                 )}
 
-                <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2 pt-1">
+                <div className="flex flex-wrap items-center justify-between text-xs text-stone-500 gap-2 pt-1">
                   <div className="flex items-center space-x-3">
                     <span>Source: {e.source}</span>
                     {e.correlated_source && (
                       <>
                         <span>•</span>
-                        <span className="text-sky-300 font-mono">
+                        <span className="text-stone-800 font-mono">
                           Pod: {e.correlated_source.id}
                         </span>
                       </>
@@ -164,7 +183,7 @@ export const EventsView: React.FC = () => {
                   </div>
 
                   {e.policy_violation && (
-                    <div className="flex items-center space-x-1 text-rose-400 font-semibold text-[11px]">
+                    <div className="flex items-center space-x-1 text-rose-700 font-semibold text-[11px]">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       <span>Violated: {e.policy_violation.name}</span>
                     </div>
@@ -175,7 +194,7 @@ export const EventsView: React.FC = () => {
           })}
 
           {events.length === 0 && (
-            <div className="p-12 text-center text-xs text-slate-500">
+            <div className="p-12 text-center text-xs text-stone-400">
               No runtime telemetry events match current filters.
             </div>
           )}
