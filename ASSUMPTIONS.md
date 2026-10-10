@@ -1,0 +1,30 @@
+# Assumptions and Design Decisions
+
+This document records all explicit assumptions, design choices, and library adaptations made during the development of **Trust Analyst**.
+
+---
+
+### 1. FalkorDB Primary Store & Zero Secondary State Store
+- **Assumption:** FalkorDB is the sole primary database and load-bearing state store for all application data: security topology, alerts, investigations, hypotheses, evidence, findings, memory baselines, watches, schedules, and tool call logs.
+- **Decision:** No SQLite, Postgres, or Redis queue is used for application state. Local filesystem storage is strictly limited to static scenario YAML specifications, the LLM replay cache (`llm_cache/`), and eval outputs.
+- **Graph Name:** The primary graph is named `trust`.
+
+### 2. Time and Simulated Clock
+- **Assumption:** All temporal attributes (`valid_from`, `valid_to`, `at`, `timestamp`) use simulated epoch seconds from `sim/clock.py`, not real wall-clock time.
+- **Decision:** The simulated clock starts at a fixed baseline epoch (e.g. `1700000000`). Advancing the clock advances watches, scheduled tasks, and telemetry windows deterministically.
+
+### 3. Model & LLM Layer
+- **Assumption:** The prompt specifies `claude-sonnet-5-5` as the default model string, but Anthropic API currently provides `claude-3-5-sonnet-20241022` or `claude-3-7-sonnet-20250219`.
+- **Decision:** We default `ANTHROPIC_MODEL` to `claude-3-5-sonnet-20241022` (aliased as `claude-sonnet-5-5` if configured). All demo and eval runs run completely offline using the deterministic record/replay cache, so an Anthropic API key is optional for reproduction.
+
+### 4. Telemetry and Raw Event Log
+- **Assumption:** Raw events are not stored as individual nodes in FalkorDB (which would cause graph bloat), but are aggregated into `EventSummary` nodes keyed by `(pod_id, kind, signature)`.
+- **Decision:** Detailed raw events are written to a synthetic JSONL log file accessed strictly via `query_events` and `process_tree` tools.
+
+### 5. Quarantined Reader
+- **Assumption:** Planner models are vulnerable to indirect prompt injection embedded in document bodies or process command-line arguments.
+- **Decision:** `search_documents` returns metadata and titles only; `read_untrusted` invokes a tool-less, isolated extraction model returning strict Pydantic schemas and an explicit `contains_instructions_to_ai` boolean flag.
+
+### 6. Containment and Human Approval Gate
+- **Assumption:** Destructive actions (`apply_isolation`, `revoke_session`) must never execute without explicit human approval.
+- **Decision:** The tool gateway intercepts action requests with `requires_approval=True` and denies them unless an `ApprovalRequest` node with `status: 'approved'` exists for that exact action and target.
