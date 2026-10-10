@@ -14,11 +14,11 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
   - [x] CI configuration for lint + tests
   - [x] *Acceptance Gate:* `GET /api/health` reports DB online.
 
-- [ ] **M1: Graph + Schema + Queries**
-  - [ ] Graph connection client (`backend/app/graph/client.py`) with parameterized Cypher binding
-  - [ ] Schema, node labels, index definitions (`backend/app/graph/schema.py`)
-  - [ ] Temporal helpers (`backend/app/graph/temporal.py`) for `valid_from`, `valid_to`, `$at` queries
-  - [ ] Core named Cypher queries in `backend/app/graph/queries.py`:
+- [x] **M1: Graph + Schema + Queries**
+  - [x] Graph connection client (`backend/app/graph/client.py`) with parameterized Cypher binding
+  - [x] Schema, node labels, index definitions (`backend/app/graph/schema.py`)
+  - [x] Temporal helpers (`backend/app/graph/temporal.py`) for `valid_from`, `valid_to`, `$at` queries
+  - [x] Core named Cypher queries in `backend/app/graph/queries.py`:
     - `entity_context`
     - `blast_radius`
     - `path_diff`
@@ -27,9 +27,9 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
     - `simulate_containment`
     - `recall_similar`
     - `centrality_rank`
-  - [ ] Unit tests for all queries against live FalkorDB container
-  - [ ] Query doc generator script (`scripts/gen_query_docs.py`)
-  - [ ] *Acceptance Gate:* Query tests pass cleanly against FalkorDB.
+  - [x] Unit tests for all queries against live FalkorDB container
+  - [x] Query doc generator script (`scripts/gen_query_docs.py`)
+  - [x] *Acceptance Gate:* Query tests pass cleanly against FalkorDB.
 
 - [ ] **M2: Sim World + Clock + Telemetry**
   - [ ] Simulated clock (`backend/app/sim/clock.py`): `now()`, `advance(seconds)`
