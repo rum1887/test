@@ -11,6 +11,10 @@ import {
   Play,
   ArrowRight,
   ShieldCheck,
+  DollarSign,
+  Clock,
+  Sparkles,
+  FileCheck,
 } from 'lucide-react';
 import { StatsResponse, HealthResponse } from '../api/client';
 
@@ -44,6 +48,89 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* CISO Executive Risk & Compliance Banner */}
+      <div className="bg-gradient-to-r from-[#0d1629] via-[#0f1b33] to-[#0c1424] border border-sky-500/25 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-950 text-sky-300 border border-sky-800">
+                EXECUTIVE POSTURE SUMMARY
+              </span>
+              <span className="text-xs text-slate-400 font-mono">AWS EKS [prod-us-east-1]</span>
+            </div>
+            <h2 className="text-xl font-bold text-white tracking-tight">
+              Continuous Workload, Identity & AI-Agent Governance
+            </h2>
+            <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+              Real-time correlation of Kubernetes RBAC, Cilium Tetragon eBPF kernel telemetry, and AI Agent MCP delegations.
+              FalkorDB Cypher engine detects multi-hop lateral movement paths to sensitive assets before breaches occur.
+            </p>
+          </div>
+
+          {/* Key Executive Metrics in Hero */}
+          <div className="flex flex-wrap items-center gap-4 shrink-0">
+            {/* Score */}
+            <div
+              onClick={() => onNavigate('compliance')}
+              className="bg-[#121c32] hover:bg-[#16233f] border border-sky-500/30 p-3.5 rounded-xl transition cursor-pointer text-center min-w-[130px]"
+            >
+              <span className="text-[10px] font-mono uppercase text-slate-400 block">Trust Score</span>
+              <div className="text-2xl font-black font-mono text-white mt-0.5">75 / 100</div>
+              <span className="text-[10px] font-mono font-semibold text-amber-400">ELEVATED RISK</span>
+            </div>
+
+            {/* Asset Exposure */}
+            <div
+              onClick={() => onNavigate('blast-radius')}
+              className="bg-[#121c32] hover:bg-[#16233f] border border-rose-500/30 p-3.5 rounded-xl transition cursor-pointer text-center min-w-[130px]"
+            >
+              <span className="text-[10px] font-mono uppercase text-slate-400 block">Reachable Assets</span>
+              <div className="text-2xl font-black font-mono text-rose-400 mt-0.5">$14.2M</div>
+              <span className="text-[10px] font-mono text-slate-400">PCI & DB Jewels</span>
+            </div>
+
+            {/* MTTC */}
+            <div
+              onClick={() => onNavigate('containment')}
+              className="bg-[#121c32] hover:bg-[#16233f] border border-emerald-500/30 p-3.5 rounded-xl transition cursor-pointer text-center min-w-[130px]"
+            >
+              <span className="text-[10px] font-mono uppercase text-slate-400 block">MTTC Speed</span>
+              <div className="text-2xl font-black font-mono text-emerald-400 mt-0.5">1.4s</div>
+              <span className="text-[10px] font-mono text-emerald-300">vs 4.2h Benchmark</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Regulatory Posture Strip */}
+        <div className="mt-5 pt-4 border-t border-[#1b2742] flex flex-wrap items-center justify-between gap-4 text-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-slate-400 font-medium">Compliance Posture:</span>
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-[#141e33] border border-[#233252] text-slate-300">
+              PCI-DSS 4.0: <strong className="text-amber-400">50%</strong>
+            </span>
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-[#141e33] border border-[#233252] text-slate-300">
+              SOC 2 Type II: <strong className="text-emerald-400">75%</strong>
+            </span>
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-[#141e33] border border-[#233252] text-slate-300">
+              EU AI Act: <strong className="text-amber-400">66%</strong>
+            </span>
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-[#141e33] border border-[#233252] text-slate-300">
+              NIST AI RMF: <strong className="text-emerald-400">100%</strong>
+            </span>
+          </div>
+
+          <button
+            onClick={() => onNavigate('compliance')}
+            className="flex items-center space-x-1 text-sky-400 hover:text-sky-300 font-semibold transition cursor-pointer"
+          >
+            <span>Review Full CISO Audit Ledger</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
 
       {/* Primary KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

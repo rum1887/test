@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, CheckCircle2, Play, ArrowRight, Activity, ShieldCheck } from 'lucide-react';
-import { api } from '../api/client';
+import {
+  Shield,
+  AlertTriangle,
+  CheckCircle2,
+  Play,
+  ArrowRight,
+  Activity,
+  ShieldCheck,
+  Code,
+  Copy,
+  Check,
+  Terminal,
+  FileCode,
+  Download,
+} from 'lucide-react';
+import { api, IaCExportResponse } from '../api/client';
 
 interface ContainmentViewProps {
   initialSourceId?: string;
@@ -18,6 +32,12 @@ export const ContainmentView: React.FC<ContainmentViewProps> = ({
   const [simulating, setSimulating] = useState(false);
   const [applying, setApplying] = useState(false);
 
+  // IaC Export Modal State
+  const [iacData, setIacData] = useState<IaCExportResponse | null>(null);
+  const [iacTab, setIacTab] = useState<'k8s' | 'kyverno' | 'mcp' | 'terraform'>('k8s');
+  const [copied, setCopied] = useState(false);
+  const [loadingIac, setLoadingIac] = useState(false);
+
   useEffect(() => {
     loadCandidates();
   }, [sourceId]);
@@ -31,7 +51,6 @@ export const ContainmentView: React.FC<ContainmentViewProps> = ({
       setCandidates(data.candidates || []);
       setRecommended(data.recommended_candidate || null);
       if (data.recommended_candidate) {
-        // Automatically run baseline simulation on the recommended candidate
         handleSimulate(data.recommended_candidate.candidate_id);
       }
     } catch (e) {
@@ -63,7 +82,6 @@ export const ContainmentView: React.FC<ContainmentViewProps> = ({
       );
       setAppliedAction(applied);
 
-      // Verify action after 500ms
       setTimeout(async () => {
         try {
           const verified = await api.verifyContainment(applied.action_id);
@@ -77,6 +95,33 @@ export const ContainmentView: React.FC<ContainmentViewProps> = ({
     } finally {
       setApplying(false);
     }
+  };
+
+  const handleExportIaC = async (targetId: string, actionType: string) => {
+    setLoadingIac(true);
+    try {
+      const data = await api.exportContainmentIaC(targetId, actionType);
+      setIacData(data);
+    } catch (e) {
+      console.error('Failed to export IaC artifact:', e);
+    } finally {
+      setLoadingIac(false);
+    }
+  };
+
+  const handleCopyCode = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const getActiveCode = () => {
+    if (!iacData) return '';
+    if (iacTab === 'k8s') return iacData.artifacts.kubernetes_network_policy_yaml;
+    if (iacTab === 'kyverno') return iacData.artifacts.kyverno_cluster_policy_yaml;
+    if (iacTab === 'mcp') return iacData.artifacts.mcp_gateway_filter_json;
+    if (iacTab === 'terraform') return iacData.artifacts.terraform_aws_sg_hcl;
+    return '';
   };
 
   return (
@@ -97,7 +142,7 @@ export const ContainmentView: React.FC<ContainmentViewProps> = ({
           <select
             value={sourceId}
             onChange={(e) => setSourceId(e.target.value)}
-            className="bg-[#12192b] border border-[#1e2a44] rounded px-2.5 py-1 text-slate-200 font-mono text-xs focus:outline-none focus:border-sky-500"
+            className="bg-[#12192b] border border-[#1e2a44] rounded px-2.5 py-1 text-slate-200 font-mono text-xs focus:outline-none focus:border-sky-500 cursor-pointer"
           >
             <option value="workload-checkout">checkout-service (Workload)</option>
             <option value="pod-checkout-7f89b">checkout-service-7f89b (Pod)</option>
@@ -162,12 +207,21 @@ export const ContainmentView: React.FC<ContainmentViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-[11px] font-mono text-slate-400 truncate max-w-[200px]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <span className="text-[11px] font-mono text-slate-400 truncate max-w-[180px]">
                       Mech: {c.enforcement_mechanism}
                     </span>
 
                     <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleExportIaC(c.candidate_id, c.action_type)}
+                        className="px-2.5 py-1 bg-[#10192e] hover:bg-[#162340] text-sky-300 border border-sky-800/80 rounded text-xs font-medium transition cursor-pointer flex items-center space-x-1"
+                        title="Export Kubernetes NetworkPolicy YAML / Kyverno GitOps artifacts"
+                      >
+                        <FileCode className="w-3 h-3 text-sky-400" />
+                        <span>IaC Playbook</span>
+                      </button>
+
                       <button
                         onClick={() => handleSimulate(c.candidate_id)}
                         className="px-2.5 py-1 bg-[#192540] hover:bg-[#223154] text-slate-200 border border-[#2b3c66] rounded text-xs font-medium transition cursor-pointer"
@@ -180,7 +234,7 @@ export const ContainmentView: React.FC<ContainmentViewProps> = ({
                         disabled={applying}
                         className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-bold transition cursor-pointer"
                       >
-                        Apply Containment
+                        Apply
                       </button>
                     </div>
                   </div>
@@ -199,7 +253,7 @@ export const ContainmentView: React.FC<ContainmentViewProps> = ({
                 <h3 className="text-sm font-bold text-white mt-0.5">Before vs After Reachability Diff</h3>
               </div>
               <span className="text-[10px] font-mono bg-sky-950 text-sky-300 border border-sky-800 px-2 py-0.5 rounded">
-                Read-Only Traversal
+                Zero-Mutation Traversal
               </span>
             </div>
 
@@ -301,6 +355,82 @@ export const ContainmentView: React.FC<ContainmentViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Production IaC Export Modal / Drawer */}
+      {iacData && (
+        <div className="bg-[#0d1322] border border-sky-500/40 rounded-xl p-6 shadow-2xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#1b253b]">
+            <div>
+              <div className="flex items-center space-x-2">
+                <FileCode className="w-5 h-5 text-sky-400" />
+                <h3 className="text-sm font-bold text-white">
+                  GitOps Infrastructure as Code (IaC) Remediation Playbook
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                Target: {iacData.target_id} | Action: {iacData.action_type}
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleCopyCode(getActiveCode())}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-semibold transition cursor-pointer"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? 'Copied to Clipboard!' : 'Copy Config'}</span>
+              </button>
+              <button
+                onClick={() => setIacData(null)}
+                className="px-3 py-1.5 bg-[#162137] hover:bg-[#202e4d] text-slate-300 rounded text-xs font-medium transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
+          {/* Format Tabs */}
+          <div className="flex space-x-2 text-xs border-b border-[#1b253b] pb-2">
+            <button
+              onClick={() => setIacTab('k8s')}
+              className={`px-3 py-1.5 rounded transition cursor-pointer ${
+                iacTab === 'k8s' ? 'bg-sky-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Kubernetes NetworkPolicy (YAML)
+            </button>
+            <button
+              onClick={() => setIacTab('kyverno')}
+              className={`px-3 py-1.5 rounded transition cursor-pointer ${
+                iacTab === 'kyverno' ? 'bg-sky-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Kyverno / OPA ClusterPolicy (YAML)
+            </button>
+            <button
+              onClick={() => setIacTab('mcp')}
+              className={`px-3 py-1.5 rounded transition cursor-pointer ${
+                iacTab === 'mcp' ? 'bg-sky-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              MCP Gateway Route Filter (JSON)
+            </button>
+            <button
+              onClick={() => setIacTab('terraform')}
+              className={`px-3 py-1.5 rounded transition cursor-pointer ${
+                iacTab === 'terraform' ? 'bg-sky-600 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Terraform AWS Security Group (HCL)
+            </button>
+          </div>
+
+          {/* Code Viewer */}
+          <div className="bg-[#070b14] border border-[#1b253b] rounded-lg p-4 font-mono text-xs text-sky-200 overflow-x-auto max-h-80 select-all">
+            <pre>{getActiveCode()}</pre>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

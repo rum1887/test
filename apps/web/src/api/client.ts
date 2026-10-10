@@ -259,4 +259,88 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/api/audit/integrity`);
     return res.json();
   },
+
+  async getCompliancePosture(): Promise<CompliancePostureResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/compliance/posture`);
+    return res.json();
+  },
+
+  async getComplianceReport(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/compliance/report`);
+    return res.json();
+  },
+
+  getComplianceExportUrl(): string {
+    return `${API_BASE_URL}/api/compliance/report/export`;
+  },
+
+  async exportContainmentIaC(targetId: string, actionType = 'QUARANTINE_POD'): Promise<IaCExportResponse> {
+    const res = await fetch(
+      `${API_BASE_URL}/api/containment/export-iac?target_id=${encodeURIComponent(targetId)}&action_type=${encodeURIComponent(actionType)}`
+    );
+    return res.json();
+  },
 };
+
+export interface ComplianceControl {
+  id: string;
+  title: string;
+  category: string;
+  status: 'PASS' | 'FAIL' | 'WARNING';
+  evidence: string;
+  impact: string;
+}
+
+export interface FrameworkData {
+  name: string;
+  score: number;
+  status: string;
+  controls: ComplianceControl[];
+}
+
+export interface ComplianceFinding {
+  title: string;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  framework: string;
+  description: string;
+  remediation: string;
+}
+
+export interface CompliancePostureResponse {
+  timestamp: number;
+  tenant_id: string;
+  tenant_name: string;
+  cluster_context: string;
+  overall_security_score: number;
+  risk_level: 'CRITICAL' | 'ELEVATED' | 'OPTIMAL';
+  total_exposure_usd: number;
+  mean_time_to_containment_seconds: number;
+  industry_benchmark_mttc_hours: number;
+  frameworks: {
+    pci_dss_4: FrameworkData;
+    soc2_type2: FrameworkData;
+    eu_ai_act: FrameworkData;
+    nist_ai_rmf: FrameworkData;
+  };
+  critical_findings: ComplianceFinding[];
+  sensitive_resources: {
+    id: string;
+    name: string;
+    type: string;
+    sensitivity: string;
+    reachers_count: number;
+    exposure_value: number;
+  }[];
+}
+
+export interface IaCExportResponse {
+  target_id: string;
+  action_type: string;
+  artifacts: {
+    kubernetes_network_policy_yaml: string;
+    kyverno_cluster_policy_yaml: string;
+    mcp_gateway_filter_json: string;
+    terraform_aws_sg_hcl: string;
+  };
+}
+

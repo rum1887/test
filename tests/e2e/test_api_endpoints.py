@@ -134,3 +134,41 @@ def test_scenarios_reset_and_load(api_client):
     reset_res = api_client.post("/api/scenarios/reset")
     assert reset_res.status_code == 200
     assert reset_res.json()["status"] == "RESET_SUCCESSFUL"
+
+def test_compliance_posture_and_report_api(api_client):
+    """GET /api/compliance/posture and /api/compliance/report."""
+    posture_res = api_client.get("/api/compliance/posture")
+    assert posture_res.status_code == 200
+    posture = posture_res.json()
+    assert "overall_security_score" in posture
+    assert "frameworks" in posture
+    assert "pci_dss_4" in posture["frameworks"]
+    assert "soc2_type2" in posture["frameworks"]
+    assert "eu_ai_act" in posture["frameworks"]
+    assert "nist_ai_rmf" in posture["frameworks"]
+    assert posture["total_exposure_usd"] > 0
+
+    report_res = api_client.get("/api/compliance/report")
+    assert report_res.status_code == 200
+    report = report_res.json()
+    assert report["report_id"].startswith("REP-AUDIT-")
+    assert "signature_sha256" in report
+    assert len(report["signature_sha256"]) == 64
+
+    export_res = api_client.get("/api/compliance/report/export")
+    assert export_res.status_code == 200
+    assert "RUNTIME TRUST LAYER" in export_res.text
+    assert "CISO & SECURITY STEERING COMMITTEE" in export_res.text
+
+def test_containment_export_iac_api(api_client):
+    """GET /api/containment/export-iac returns valid Kubernetes NetworkPolicy and Kyverno artifacts."""
+    res = api_client.get("/api/containment/export-iac?target_id=workload-checkout&action_type=QUARANTINE_POD")
+    assert res.status_code == 200
+    data = res.json()
+    assert "artifacts" in data
+    assert "kubernetes_network_policy_yaml" in data["artifacts"]
+    assert "NetworkPolicy" in data["artifacts"]["kubernetes_network_policy_yaml"]
+    assert "kyverno_cluster_policy_yaml" in data["artifacts"]
+    assert "ClusterPolicy" in data["artifacts"]["kyverno_cluster_policy_yaml"]
+    assert "mcp_gateway_filter_json" in data["artifacts"]
+

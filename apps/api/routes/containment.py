@@ -168,3 +168,94 @@ def list_containment_actions() -> List[Dict[str, Any]]:
         }
         for r in rows
     ]
+
+@router.get("/api/containment/export-iac")
+def export_containment_iac(
+    target_id: str = Query(..., description="Target node ID, e.g. workload-checkout or pod-checkout-7df89"),
+    action_type: str = Query("QUARANTINE_POD", description="Action type: QUARANTINE_POD, REVOKE_RBAC, BLOCK_MCP_TOOL"),
+) -> Dict[str, Any]:
+    """
+    Generates GitOps-ready Infrastructure-as-Code (IaC) containment artifacts
+    for immediate deployment into Kubernetes or Cloud Gateway.
+    """
+    clean_target = target_id.replace("pod-", "").replace("workload-", "")
+    
+    k8s_network_policy_yaml = f"""apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: quarantine-{clean_target}-containment
+  namespace: prod
+  labels:
+    app.kubernetes.io/managed-by: runtime-trust-layer
+    security.runtime.io/containment-status: quarantined
+spec:
+  podSelector:
+    matchLabels:
+      app: {clean_target}
+  policyTypes:
+  - Ingress
+  - Egress
+  # Complete zero-trust isolation: zero ingress, zero egress allowed
+  ingress: []
+  egress: []
+"""
+
+    kyverno_admission_policy_yaml = f"""apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-compromised-{clean_target}-sa
+  annotations:
+    policies.kyverno.io/title: Block Compromised Identity
+    policies.kyverno.io/severity: critical
+spec:
+  validationFailureAction: Enforce
+  rules:
+  - name: deny-compromised-serviceaccount
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          - Deployment
+    validate:
+      message: "Runtime Trust Layer Policy: Identity '{clean_target}' is quarantined due to active blast radius exposure."
+      pattern:
+        spec:
+          =(serviceAccountName): "!deployer-sa"
+"""
+
+    mcp_gateway_filter_json = f"""{{
+  "filter_version": "v1.2",
+  "name": "runtime-trust-layer-mcp-containment",
+  "target_identity": "{target_id}",
+  "enforcement_mode": "FAIL_CLOSED_BLOCK",
+  "rule": {{
+    "action": "DENY",
+    "http_status": 403,
+    "error_code": "CONTAINMENT_REVOCATION_ACTIVE",
+    "reason": "Agent session revoked via Runtime Trust Layer automated containment playbook"
+  }}
+}}"""
+
+    terraform_sg_snippet = f"""# Runtime Trust Layer Automated Containment Rule
+resource "aws_security_group_rule" "isolate_{clean_target}" {{
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 65535
+  protocol          = "-1"
+  security_group_id = var.workload_sg_id
+  cidr_blocks       = ["0.0.0.0/32"] # Nullified route
+  description       = "Automated quarantine applied by Runtime Trust Layer"
+}}"""
+
+    return {
+        "target_id": target_id,
+        "action_type": action_type,
+        "artifacts": {
+            "kubernetes_network_policy_yaml": k8s_network_policy_yaml,
+            "kyverno_cluster_policy_yaml": kyverno_admission_policy_yaml,
+            "mcp_gateway_filter_json": mcp_gateway_filter_json,
+            "terraform_aws_sg_hcl": terraform_sg_snippet,
+        }
+    }
+

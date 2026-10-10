@@ -8,6 +8,7 @@ import { BlastRadiusView } from './components/BlastRadiusView';
 import { EventsView } from './components/EventsView';
 import { PolicyDecisionsView } from './components/PolicyDecisionsView';
 import { ContainmentView } from './components/ContainmentView';
+import { ComplianceView } from './components/ComplianceView';
 import { api, HealthResponse, StatsResponse, CytoscapeNode, CytoscapeEdge } from './api/client';
 
 export function App() {
@@ -116,6 +117,8 @@ export function App() {
             onTestAgentBlock={handleTestAgentBlock}
           />
         )}
+
+        {currentTab === 'compliance' && <ComplianceView />}
 
         {currentTab === 'graph' && (
           <GraphView
