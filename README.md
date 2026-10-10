@@ -48,7 +48,7 @@ make demo
 # 4. Run the 14-scenario evaluation benchmark
 make eval
 
-# 5. Run all 40 unit and integration tests
+# 5. Run all 45 unit and integration tests
 make test
 ```
 
@@ -125,10 +125,13 @@ The graph computes **what is possible** (paths, reachability, diffs). The agent 
 
 ---
 
-## 3. Why FalkorDB is Load-Bearing
+## 3. Hybrid Architecture: Why FalkorDB is Load-Bearing
 
-If FalkorDB were removed, **Trust Analyst would immediately fail closed and stop working**. All core state lives inside FalkorDB:
-- **No SQLite / Postgres / Redis queues:** All entities, telemetry summaries, change records, investigations, hypotheses, evidence, findings, memory baselines, watches, schedules, approvals, and tool-call audit logs live directly in FalkorDB.
+In accordance with our architectural RFC ([docs/DESIGN_GRAPH_VS_RELATIONAL.md](docs/DESIGN_GRAPH_VS_RELATIONAL.md)), Trust Analyst employs a principled **hybrid architecture**:
+- **FalkorDB (The Cognitive Map):** The primary graph database powering all relationship-intensive reasoning: topological reachability, temporal path diffs, crown jewel convergence, taint chains, and the full evidence-cited explanation tree (`Investigation`, `Hypothesis`, `Evidence`, `Finding`). If FalkorDB were removed, **Trust Analyst loses its map and fails closed immediately**.
+- **SQLite (The Operational Engine):** Handles tabular execution state requiring $O(\log N)$ range and status lookups (`approvals`, `watches`, `scheduled_tasks`, `tool_calls` audit log, `step_states` checkpoints), with foreign keys referencing FalkorDB node IDs.
+- **Dual-write Projections:** Operational tools maintain dual-write projections into FalkorDB so that operational state can be seamlessly traversed and visualized alongside security entities in the FalkorDB Browser and Cytoscape explorer.
+
 - **Temporal Convention:** Every relationship carrying world state possesses `valid_from` and `valid_to` epoch integers. Queries take an `$at` parameter to query point-in-time past states.
 - **Fail-Closed Policy Gateway:** The agent's own actions are mediated by a deterministic gateway that inspects FalkorDB before executing any disruptive tool.
 

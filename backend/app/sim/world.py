@@ -8,6 +8,7 @@ import logging
 import random
 from typing import Any
 
+from backend.app.db.sqlite import reset_sqlite_db
 from backend.app.graph.client import GraphClient, get_graph_client
 from backend.app.graph.schema import init_schema
 from backend.app.sim.clock import get_clock
@@ -19,7 +20,7 @@ DEFAULT_SEED = 42
 
 def seed_world(client: GraphClient | None = None, seed: int = DEFAULT_SEED) -> dict[str, Any]:
     """
-    Seeds the deterministic baseline environment into FalkorDB.
+    Seeds the deterministic baseline environment into FalkorDB and resets operational SQLite store.
     Guarantees reproducible node counts, properties, and relationship topology.
     """
     client = client or get_graph_client()
@@ -30,6 +31,9 @@ def seed_world(client: GraphClient | None = None, seed: int = DEFAULT_SEED) -> d
     # Reset graph and re-initialize indexes
     client.reset_graph()
     init_schema(client)
+
+    # Reset operational SQLite tables
+    reset_sqlite_db()
 
     # 1. Workloads (6)
     workloads = [

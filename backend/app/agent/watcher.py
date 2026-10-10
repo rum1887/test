@@ -8,6 +8,7 @@ import json
 import logging
 from typing import Any
 
+from backend.app.db.sqlite import list_active_watches, update_watch_status
 from backend.app.graph.client import GraphClient, get_graph_client
 from backend.app.sim.clock import SimulatedClock, get_clock
 from backend.app.sim.telemetry import telemetry_source
@@ -46,25 +47,31 @@ class WatchEvaluator:
         sim_clock = clock or get_clock()
         now = sim_clock.now()
 
-        # Query all active watches
-        rows = c.query_dicts(
-            """
-            MATCH (w:Watch {status: 'active'})
-            OPTIONAL MATCH (inv:Investigation)-[:REGISTERED]->(w)
-            RETURN w.id AS id, w.kind AS kind, w.spec AS spec, w.expires_at AS expires_at, inv.id AS inv_id
-            """
-        )
+        # Query all active watches from relational operational SQLite first
+        sqlite_watches = list_active_watches()
+        if sqlite_watches:
+            rows = sqlite_watches
+        else:
+            # Fallback to FalkorDB for backwards compatibility with raw Cypher seeds
+            rows = c.query_dicts(
+                """
+                MATCH (w:Watch {status: 'active'})
+                OPTIONAL MATCH (inv:Investigation)-[:REGISTERED]->(w)
+                RETURN w.id AS id, w.kind AS kind, w.spec AS spec, w.expires_at AS expires_at, inv.id AS inv_id, w.investigation_id AS investigation_id
+                """
+            )
 
         triggered_events: list[dict[str, Any]] = []
 
         for row in rows:
             wid = row["id"]
             kind = row["kind"]
-            inv_id = row.get("inv_id")
+            inv_id = row.get("investigation_id") or row.get("inv_id")
             expires_at = row.get("expires_at") or (now + 86400)
 
             # Check expiration
             if now >= expires_at:
+                update_watch_status(wid, status="expired")
                 c.query("MATCH (w:Watch {id: $id}) SET w.status = 'expired'", {"id": wid})
                 continue
 
@@ -111,7 +118,8 @@ class WatchEvaluator:
                     )
 
             if is_triggered:
-                # Transition status to triggered
+                # Transition status to triggered in SQLite and FalkorDB
+                update_watch_status(wid, status="triggered", triggered_at=now)
                 c.query(
                     """
                     MATCH (w:Watch {id: $id})

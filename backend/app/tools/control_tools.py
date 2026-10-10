@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from backend.app.db.sqlite import create_approval, create_task, create_watch
 from backend.app.graph.client import GraphClient, get_graph_client
 from backend.app.sim.clock import SimulatedClock, get_clock
 from backend.app.tools.registry import ToolContext, ToolResult, registry
@@ -76,6 +77,17 @@ def register_watch(
         """,
         {"invid": investigation_id, "wid": watch_id},
         ignore_errors=True,
+    )
+
+    # Persist in operational SQLite database
+    create_watch(
+        watch_id=watch_id,
+        investigation_id=investigation_id,
+        kind=kind,
+        spec=spec,
+        created_at=now,
+        expires_at=expires_at,
+        status="active",
     )
 
     data = {"watch_id": watch_id, "investigation_id": investigation_id, "expires_at": expires_at}
@@ -148,6 +160,17 @@ def schedule_task(
         ignore_errors=True,
     )
 
+    # Persist in operational SQLite database
+    create_task(
+        task_id=task_id,
+        investigation_id=investigation_id,
+        action=action,
+        payload=payload,
+        due_at=due_at,
+        created_at=now,
+        status="pending",
+    )
+
     data = {"task_id": task_id, "due_at": due_at, "action": action}
     return ToolResult(tool="schedule_task", success=True, data=data, evidence_ids=[f"ev:task:{task_id}"])
 
@@ -218,6 +241,17 @@ def request_approval(
         """,
         {"invid": investigation_id, "aid": approval_id},
         ignore_errors=True,
+    )
+
+    # Persist in operational SQLite database
+    create_approval(
+        approval_id=approval_id,
+        investigation_id=investigation_id,
+        action=action,
+        target_id=target_id,
+        rationale=rationale,
+        created_at=now,
+        status="pending",
     )
 
     data = {

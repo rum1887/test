@@ -25,6 +25,18 @@ from pydantic import BaseModel
 from backend.app.agent.runner import durable_runner
 from backend.app.agent.worker import worker_tick
 from backend.app.config import settings
+from backend.app.db.sqlite import (
+    list_approvals as sqlite_list_approvals,
+)
+from backend.app.db.sqlite import (
+    list_tasks as sqlite_list_tasks,
+)
+from backend.app.db.sqlite import (
+    list_watches as sqlite_list_watches,
+)
+from backend.app.db.sqlite import (
+    update_approval_status,
+)
 from backend.app.graph.client import get_graph_client
 from backend.app.sim.clock import get_clock
 from backend.app.sim.scenarios import apply_scenario, load_all_scenarios, load_scenario
@@ -304,7 +316,11 @@ class ActApprovalInput(BaseModel):
 
 @app.get("/api/approvals")
 def list_approvals():
-    """Lists all pending and historical ApprovalRequests in FalkorDB."""
+    """Lists all pending and historical ApprovalRequests from SQLite operational store."""
+    sq_rows = sqlite_list_approvals()
+    if sq_rows:
+        return sq_rows
+
     client = get_graph_client()
     rows = client.query_dicts(
         """
@@ -337,6 +353,7 @@ def act_on_approval(appr_id: str, payload: ActApprovalInput):
     clock = get_clock()
 
     if payload.action_decision == "rejected":
+        update_approval_status(appr_id, status="rejected", approver=payload.approver)
         client.query(
             "MATCH (ar:ApprovalRequest {id: $id}) SET ar.status = 'rejected', ar.approver = $approver",
             {"id": appr_id, "approver": payload.approver},
@@ -471,7 +488,11 @@ def get_subgraph(
 # -----------------------------------------------------------------------------
 @app.get("/api/watches")
 def list_watches():
-    """Fetches all Watch nodes in FalkorDB."""
+    """Fetches all Watch records from operational SQLite store with FalkorDB fallback."""
+    sq_watches = sqlite_list_watches()
+    if sq_watches:
+        return sq_watches
+
     client = get_graph_client()
     return client.query_dicts(
         """
@@ -486,7 +507,11 @@ def list_watches():
 
 @app.get("/api/tasks")
 def list_tasks():
-    """Fetches all ScheduledTask nodes in FalkorDB."""
+    """Fetches all ScheduledTask records from operational SQLite store with FalkorDB fallback."""
+    sq_tasks = sqlite_list_tasks()
+    if sq_tasks:
+        return sq_tasks
+
     client = get_graph_client()
     return client.query_dicts(
         """

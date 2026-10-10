@@ -8,6 +8,7 @@ import json
 import logging
 from typing import Any
 
+from backend.app.db.sqlite import list_due_tasks, update_task_status
 from backend.app.graph.client import GraphClient, get_graph_client
 from backend.app.sim.clock import SimulatedClock, get_clock
 from backend.app.tools.registry import ToolContext, registry
@@ -31,23 +32,29 @@ class TaskScheduler:
         sim_clock = clock or get_clock()
         now = sim_clock.now()
 
-        rows = c.query_dicts(
-            """
-            MATCH (st:ScheduledTask {status: 'pending'})
-            WHERE st.due_at <= $now
-            OPTIONAL MATCH (inv:Investigation)-[:SCHEDULED]->(st)
-            RETURN st.id AS id, st.action AS action, st.payload AS payload, st.due_at AS due_at, inv.id AS inv_id
-            ORDER BY st.due_at ASC
-            """,
-            {"now": now},
-        )
+        # Query due tasks from operational SQLite first
+        sqlite_due = list_due_tasks(now=now)
+        if sqlite_due:
+            rows = sqlite_due
+        else:
+            # Fallback to FalkorDB for backwards compatibility with raw Cypher seeds
+            rows = c.query_dicts(
+                """
+                MATCH (st:ScheduledTask {status: 'pending'})
+                WHERE st.due_at <= $now
+                OPTIONAL MATCH (inv:Investigation)-[:SCHEDULED]->(st)
+                RETURN st.id AS id, st.action AS action, st.payload AS payload, st.due_at AS due_at, inv.id AS inv_id, st.investigation_id AS investigation_id
+                ORDER BY st.due_at ASC
+                """,
+                {"now": now},
+            )
 
         executed_tasks: list[dict[str, Any]] = []
 
         for row in rows:
             tid = row["id"]
             action = row["action"]
-            inv_id = row.get("inv_id")
+            inv_id = row.get("investigation_id") or row.get("inv_id")
             raw_payload = row.get("payload", "{}")
             payload = json.loads(raw_payload) if isinstance(raw_payload, str) else raw_payload
 
@@ -71,8 +78,14 @@ class TaskScheduler:
                 success = False
                 error_msg = str(e)
 
-            # Update ScheduledTask status in FalkorDB
+            # Update ScheduledTask status in operational SQLite and FalkorDB
             status = "completed" if success else "failed"
+            update_task_status(
+                task_id=tid,
+                status=status,
+                executed_at=now,
+                result=error_msg or "Success",
+            )
             c.query(
                 """
                 MATCH (st:ScheduledTask {id: $id})

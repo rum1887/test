@@ -10,6 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from backend.app.db.sqlite import count_tool_calls_for_investigation, get_approved_action
 from backend.app.graph.client import GraphClient
 from backend.app.sim.clock import SimulatedClock
 from backend.app.tools.registry import ToolContext, ToolDef
@@ -139,24 +140,32 @@ def evaluate_gateway(
             or arguments.get("subject_id")
         )
 
-        app_query = """
-            MATCH (ar:ApprovalRequest)
-            WHERE ar.action = $action AND ar.status = 'approved'
-            RETURN ar.id, ar.target_id
-        """
-        app_params: dict[str, Any] = {"action": tool_def.name}
-
-        try:
-            app_res = client.query(app_query, app_params)
-        except Exception as e:
-            return GatewayDecision(allowed=False, reason=f"Failed to check approval status: {e}")
-
-        # Find matching approval
         matched = False
-        for ar_id, ar_target in app_res:
-            if not target_id or ar_target == target_id:
+        # Check relational operational database first
+        try:
+            sqlite_appr = get_approved_action(action=tool_def.name, target_id=target_id)
+            if sqlite_appr:
                 matched = True
-                break
+        except Exception as e:
+            logger.warning(f"Could not query operational SQLite approvals: {e}")
+
+        # Fallback to FalkorDB for backwards compatibility with raw graph seeds
+        if not matched:
+            app_query = """
+                MATCH (ar:ApprovalRequest)
+                WHERE ar.action = $action AND ar.status = 'approved'
+                RETURN ar.id, ar.target_id
+            """
+            app_params: dict[str, Any] = {"action": tool_def.name}
+
+            try:
+                app_res = client.query(app_query, app_params)
+                for ar_id, ar_target in app_res:
+                    if not target_id or ar_target == target_id:
+                        matched = True
+                        break
+            except Exception as e:
+                return GatewayDecision(allowed=False, reason=f"Failed to check approval status: {e}")
 
         if not matched:
             return GatewayDecision(
@@ -169,6 +178,16 @@ def evaluate_gateway(
 
     # 4. Investigation Budget Check
     if context.investigation_id:
+        try:
+            sqlite_cnt = count_tool_calls_for_investigation(context.investigation_id)
+            if sqlite_cnt >= DEFAULT_MAX_TOOL_CALLS:
+                return GatewayDecision(
+                    allowed=False,
+                    reason=f"Investigation budget exceeded: max {DEFAULT_MAX_TOOL_CALLS} tool calls reached.",
+                )
+        except Exception:
+            pass
+
         try:
             call_cnt_res = client.query(
                 """

@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     FALKORDB_PORT: int = 6379
     FALKORDB_GRAPH: str = "trust"
 
+    # SQLite operational store settings
+    SQLITE_DB_PATH: str = "trust_operational.db"
+
     # API and server settings
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000

@@ -12,6 +12,7 @@ from typing import Any, Callable, Type
 
 from pydantic import BaseModel, Field
 
+from backend.app.db.sqlite import log_tool_call
 from backend.app.graph.client import GraphClient, get_graph_client
 from backend.app.sim.clock import SimulatedClock, get_clock
 
@@ -256,7 +257,25 @@ class ToolRegistry:
         sim_time: int,
         context: ToolContext,
     ) -> None:
-        """Idempotently writes a ToolCall node to FalkorDB and links it to session and investigation."""
+        """Idempotently writes a ToolCall record to SQLite and FalkorDB."""
+        # 1. Operational SQLite audit log
+        try:
+            log_tool_call(
+                call_id=call_id,
+                tool=tool_name,
+                arguments=arguments,
+                allowed=allowed,
+                reason=reason,
+                evidence_ids=evidence_ids,
+                duration_ms=duration_ms,
+                at=sim_time,
+                session_id=context.session_id,
+                investigation_id=context.investigation_id,
+            )
+        except Exception as e:
+            logger.warning(f"Could not log tool call to operational SQLite: {e}")
+
+        # 2. FalkorDB graph projection
         try:
             client.query(
                 """

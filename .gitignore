@@ -29,4 +29,7 @@ falkordb_data/
 # Runtime telemetry & eval output
 telemetry.jsonl
 eval_output/
+*.db
+*.db-wal
+*.db-shm
 

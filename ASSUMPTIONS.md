@@ -4,10 +4,12 @@ This document records all explicit assumptions, design choices, and library adap
 
 ---
 
-### 1. FalkorDB Primary Store & Zero Secondary State Store
-- **Assumption:** FalkorDB is the sole primary database and load-bearing state store for all application data: security topology, alerts, investigations, hypotheses, evidence, findings, memory baselines, watches, schedules, and tool call logs.
-- **Decision:** No SQLite, Postgres, or Redis queue is used for application state. Local filesystem storage is strictly limited to static scenario YAML specifications, the LLM replay cache (`llm_cache/`), and eval outputs.
-- **Graph Name:** The primary graph is named `trust`.
+### 1. Hybrid Architecture: FalkorDB (Cognitive Reasoning) & SQLite (Operational State)
+- **Assumption:** In accordance with the architectural RFC (*"Graph vs. other data structures: Trust Analyst design"* by @rum), a graph database earns its place specifically where the workload involves relationship traversal (reachability, blast radius, temporal diffs, multi-threat convergence, provenance/taint chains, similar-incident recall, and evidence-linked findings). Operational execution state (approvals queues, active watches, scheduled tasks, tool-call audit logs, and investigation step checkpoints) exhibits no multi-hop traversal and is better served by relational indexed tables.
+- **Decision:** We implement a clean hybrid architecture:
+  - **FalkorDB (`trust` graph):** Houses all security topology entities, temporal edge intervals, and reasoning nodes (`Investigation`, `Hypothesis`, `Evidence`, `Finding`). If FalkorDB is removed, the analyst loses its cognitive map and all reasoning fails closed.
+  - **SQLite (`trust_operational.db`):** Houses operational execution state with foreign keys pointing to FalkorDB node IDs.
+  - **Dual-write projection:** For UI graph exploration and backward compatibility with raw Cypher queries, operational tools maintain dual-write projections into FalkorDB while SQLite serves as the high-performance indexed operational engine.
 
 ### 2. Time and Simulated Clock
 - **Assumption:** All temporal attributes (`valid_from`, `valid_to`, `at`, `timestamp`) use simulated epoch seconds from `sim/clock.py`, not real wall-clock time.

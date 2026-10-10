@@ -19,16 +19,19 @@ Pairs of runtime alerts look identical on the surface but possess opposite groun
 
 ---
 
-## 2. Load-Bearing Role of FalkorDB
+## 2. Hybrid Architecture: Load-Bearing Graph + Relational Operational Store
 
-If FalkorDB were removed, **Trust Analyst would immediately fail-closed and cease to function**. All core security entities, runtime states, investigations, and memory live natively in FalkorDB:
+In accordance with our architectural RFC ([docs/DESIGN_GRAPH_VS_RELATIONAL.md](docs/DESIGN_GRAPH_VS_RELATIONAL.md)), Trust Analyst implements a principled **hybrid architecture**:
+- **FalkorDB (The Cognitive Map):** The primary graph database powering all relationship-intensive reasoning: topological reachability, temporal path diffs, crown jewel convergence, taint chains, and the full evidence-cited explanation tree (`Investigation`, `Hypothesis`, `Evidence`, `Finding`). If FalkorDB were removed, **Trust Analyst loses its map and fails closed immediately**.
+- **SQLite (The Operational Engine):** Handles tabular execution state requiring $O(\log N)$ range and status lookups (`approvals`, `watches`, `scheduled_tasks`, `tool_calls` audit log, `step_states` checkpoints), with foreign keys referencing FalkorDB node IDs.
+- **Dual-write Projections:** Operational tools maintain dual-write projections into FalkorDB so that operational state can be seamlessly traversed and visualized alongside security entities in the FalkorDB Browser and Cytoscape explorer.
 
 1. **Security Entity Graph:** `Principal`, `Agent`, `AgentSession`, `Delegation`, `Tool`, `MCPServer`, `Workload`, `Pod`, `ServiceAccount`, `Permission`, `SensitiveResource`, `NetworkEndpoint`.
 2. **Temporal Edge Model:** Relationships carry `valid_from`, `valid_to`, `provenance`, and `source`. Querying the past is a first-class operation via temporal parameter `$at`.
 3. **Telemetry Summaries:** Tetragon-like eBPF events are aggregated into compact `EventSummary` nodes in FalkorDB.
 4. **Investigations & Hypotheses:** Every investigation creates an `Investigation` node linked to competing `Hypothesis` nodes and verified `Claim` records.
-5. **Human-in-the-Loop Approvals:** `ApprovalRequest` nodes gate disruptive actions; policy gateways check graph state before allowing tool execution.
-6. **Active Watches & Task Scheduler:** `Watch` nodes (telemetry and Cypher pattern criteria) and `ScheduledTask` nodes live in the graph and are evaluated on simulated clock ticks.
+5. **Human-in-the-Loop Approvals:** `ApprovalRequest` operational records gate disruptive actions; policy gateways check state before allowing tool execution.
+6. **Active Watches & Task Scheduler:** `Watch` monitors and `ScheduledTask` follow-ups are evaluated on simulated clock ticks.
 7. **Graph Memory:** `Baseline` profiles, `Finding` records, and `SIMILAR_TO` memory edges persist across investigations.
 
 ---
@@ -83,7 +86,7 @@ make up
 # 2. Seed synthetic environment
 make seed
 
-# 3. Run all unit and integration tests (40 tests)
+# 3. Run all unit and integration tests (45 tests)
 make test
 
 # 4. Run full evaluation benchmark across all 14 scenarios

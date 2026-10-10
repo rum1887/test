@@ -9,6 +9,7 @@ import logging
 from typing import Any
 
 from backend.app.agent.analyst import AnalystAgent, InvestigationState, analyst_agent
+from backend.app.db.sqlite import get_approval, update_approval_status
 from backend.app.graph.client import GraphClient, get_graph_client
 from backend.app.sim.clock import SimulatedClock, get_clock
 from backend.app.tools.registry import ToolContext, registry
@@ -110,24 +111,37 @@ class DurableRunner:
         sim_clock = clock or get_clock()
         now = sim_clock.now()
 
-        # 1. Fetch approval details
-        appr_rows = c.query_dicts(
-            """
-            MATCH (ar:ApprovalRequest {id: $id})
-            OPTIONAL MATCH (inv:Investigation)-[:REQUESTED]->(ar)
-            RETURN ar.action AS action, ar.target_id AS target_id, ar.status AS status, inv.id AS inv_id
-            """,
-            {"id": approval_id},
+        # 1. Fetch approval details from SQLite first
+        sqlite_appr = get_approval(approval_id)
+        if sqlite_appr:
+            action = sqlite_appr["action"]
+            target_id = sqlite_appr["target_id"]
+            inv_id = sqlite_appr.get("investigation_id") or "inv-runtime"
+        else:
+            # Fallback to FalkorDB for backwards compatibility with raw Cypher seeds
+            appr_rows = c.query_dicts(
+                """
+                MATCH (ar:ApprovalRequest {id: $id})
+                OPTIONAL MATCH (inv:Investigation)-[:REQUESTED]->(ar)
+                RETURN ar.action AS action, ar.target_id AS target_id, ar.status AS status, inv.id AS inv_id
+                """,
+                {"id": approval_id},
+            )
+            if not appr_rows:
+                raise ValueError(f"ApprovalRequest '{approval_id}' not found.")
+
+            ar_data = appr_rows[0]
+            action = ar_data["action"]
+            target_id = ar_data["target_id"]
+            inv_id = ar_data.get("inv_id") or "inv-runtime"
+
+        # 2. Mark approval approved in operational SQLite and FalkorDB
+        update_approval_status(
+            approval_id=approval_id,
+            status="approved",
+            approver=approver,
+            approved_at=now,
         )
-        if not appr_rows:
-            raise ValueError(f"ApprovalRequest '{approval_id}' not found.")
-
-        ar_data = appr_rows[0]
-        action = ar_data["action"]
-        target_id = ar_data["target_id"]
-        inv_id = ar_data.get("inv_id") or "inv-runtime"
-
-        # 2. Mark approval approved in FalkorDB
         c.query(
             """
             MATCH (ar:ApprovalRequest {id: $id})

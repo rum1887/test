@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from backend.app.agent.llm import LLMClient, llm_client
 from backend.app.agent.prompts import PLANNER_SYSTEM_PROMPT
 from backend.app.agent.verifier import ClaimItem, VerdictVerifier, verdict_verifier
+from backend.app.db.sqlite import get_latest_step_state, save_step_state
 from backend.app.graph.client import GraphClient, get_graph_client
 from backend.app.sim.clock import SimulatedClock, get_clock
 from backend.app.tools import ToolContext, registry
@@ -116,7 +117,7 @@ class AnalystAgent:
         client: GraphClient | None = None,
         clock: SimulatedClock | None = None,
     ) -> None:
-        """Persists investigation state and state_json to FalkorDB for durability."""
+        """Persists investigation state to relational SQLite step checkpoints and FalkorDB."""
         c = client or get_graph_client()
         sim_clock = clock or get_clock()
         now = sim_clock.now()
@@ -126,6 +127,19 @@ class AnalystAgent:
         conf_val = state.verdict.confidence if state.verdict else None
         summary_val = state.verdict.summary if state.verdict else None
 
+        # 1. Operational SQLite step checkpoint
+        try:
+            save_step_state(
+                investigation_id=state.investigation_id,
+                step_index=state.step_count,
+                status=state.status,
+                state_json=state_dump,
+                created_at=now,
+            )
+        except Exception as e:
+            logger.warning(f"Could not persist step state to SQLite: {e}")
+
+        # 2. FalkorDB graph update
         c.query(
             """
             MATCH (inv:Investigation {id: $id})
@@ -152,17 +166,39 @@ class AnalystAgent:
         investigation_id: str,
         client: GraphClient | None = None,
     ) -> InvestigationState | None:
-        """Reconstructs complete InvestigationState from FalkorDB state_json and graph status."""
+        """Reconstructs complete InvestigationState from SQLite step checkpoints or FalkorDB state_json."""
         c = client or get_graph_client()
+        state: InvestigationState | None = None
+
+        # 1. Try loading from SQLite operational store first
+        try:
+            latest = get_latest_step_state(investigation_id)
+            if latest and latest.get("state_json"):
+                state = InvestigationState.model_validate_json(latest["state_json"])
+        except Exception as e:
+            logger.warning(f"Could not load state from SQLite: {e}")
+
+        # 2. Fallback to FalkorDB
+        if not state:
+            rows = c.query_dicts(
+                "MATCH (inv:Investigation {id: $id}) RETURN inv.state_json AS state_json, inv.status AS status",
+                {"id": investigation_id},
+            )
+            if not rows or not rows[0].get("state_json"):
+                return None
+            state = InvestigationState.model_validate_json(rows[0]["state_json"])
+            if rows[0].get("status"):
+                state.status = rows[0]["status"]
+            return state
+
+        # Sync current status from graph (e.g., killed, paused_watch)
         rows = c.query_dicts(
-            "MATCH (inv:Investigation {id: $id}) RETURN inv.state_json AS state_json, inv.status AS status",
+            "MATCH (inv:Investigation {id: $id}) RETURN inv.status AS status",
             {"id": investigation_id},
         )
-        if not rows or not rows[0].get("state_json"):
-            return None
-        state = InvestigationState.model_validate_json(rows[0]["state_json"])
-        if rows[0].get("status"):
+        if rows and rows[0].get("status"):
             state.status = rows[0]["status"]
+
         return state
 
     def triage(
