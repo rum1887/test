@@ -56,7 +56,6 @@ def apply_isolation(
     return ToolResult(tool="apply_isolation", success=True, data=data, evidence_ids=evidence_ids)
 
 
-
 # 24. Revoke Session
 
 
@@ -276,7 +275,6 @@ def verify_containment(
     )
     if sibling_res:
         escalation_needed = True
-
 
     contained = (remaining_events == 0) and (not escalation_needed)
     details = (

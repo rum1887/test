@@ -477,17 +477,27 @@ class AnalystAgent:
         )
         has_offboarded_actor = offboarded_actor_res[0][0] > 0 if offboarded_actor_res else False
 
-        # 3. Check for unauthorized sensitive resource access
+        # 3. Check for unauthorized sensitive resource access (direct or within 3 hops)
         sr_touch_res = c.query(
             """
-            MATCH (p {id: $id})-[:CAN_ACCESS]->(sr:SensitiveResource)
+            MATCH (p {id: $id})-[*1..3]-(sr:SensitiveResource)
             RETURN count(sr)
             """,
             {"id": target_id},
         )
         touched_sr = sr_touch_res[0][0] > 0 if sr_touch_res else False
 
-        # 4. Check for unknown external C2 endpoints
+        # 4. Check for unapproved wildcard permission
+        wildcard_res = c.query(
+            """
+            MATCH (p {id: $id})-[:HAS_PERMISSION]->(perm:Permission {verb: '*'})
+            RETURN count(perm)
+            """,
+            {"id": target_id},
+        )
+        has_wildcard = wildcard_res[0][0] > 0 if wildcard_res else False
+
+        # 5. Check for unknown external C2 endpoints
         c2_res = c.query(
             """
             MATCH (p {id: $id})-[:CONNECTED_TO]->(ep:NetworkEndpoint {known: false})
@@ -497,23 +507,24 @@ class AnalystAgent:
         )
         has_c2_endpoint = c2_res[0][0] > 0 if c2_res else False
 
-        # 5. Check if authorized ticket or baseline exists specifically for target
+        # 6. Check if authorized ticket, changeset, or baseline exists for target or its parent workload
         ticket_res = c.query(
             """
-            OPTIONAL MATCH (d:Document)-[:ABOUT]->(t {id: $id}) WHERE d.trust = 'trusted'
-            OPTIONAL MATCH (b:Baseline)-[:DESCRIBES]->(t {id: $id})
-            RETURN count(d) + count(b) AS auth_count
+            OPTIONAL MATCH (d:Document)-[:ABOUT]->(e)-[:CONTAINS*0..1]->(t {id: $id}) WHERE d.trust = 'trusted'
+            OPTIONAL MATCH (cs:ChangeSet)-[:TOUCHED]->(e2)-[:CONTAINS*0..1]->(t {id: $id})
+            OPTIONAL MATCH (b:Baseline)-[:DESCRIBES]->(e3)-[:CONTAINS*0..1]->(t {id: $id})
+            RETURN count(d) + count(cs) + count(b) AS auth_count
             """,
             {"id": target_id},
         )
         has_auth_evidence = ticket_res[0][0] > 0 if ticket_res else False
 
         # Synthesize ground-truth determination
-        if has_untrusted_doc or has_offboarded_actor or touched_sr:
+        if has_untrusted_doc or has_offboarded_actor:
             is_malicious = True
         elif has_auth_evidence:
             is_malicious = False
-        elif has_c2_endpoint:
+        elif has_c2_endpoint or (touched_sr and not has_auth_evidence) or (has_wildcard and not has_auth_evidence):
             is_malicious = True
         else:
             is_malicious = False
@@ -531,7 +542,12 @@ class AnalystAgent:
                     evidence_ids=evidence_keys[:3],
                 ),
             ]
-            action_type = "apply_isolation" if "pod" in target_id else "revoke_session"
+            if "pod" in target_id:
+                action_type = "apply_isolation"
+            elif "sa" in target_id:
+                action_type = "revoke_permission"
+            else:
+                action_type = "revoke_session"
             actions = [
                 RecommendedAction(
                     type=action_type,

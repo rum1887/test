@@ -84,13 +84,13 @@ This document tracks the end-to-end execution of Trust Analyst for Graph Hacks: 
   - [x] Semantic & procedural memory: `Baseline` updates, `Finding` records, `SIMILAR_TO` links
   - [x] *Acceptance Gate:* Pair 7 escalates correctly; a watch wakes an investigation on clock advance.
 
-- [ ] **M8: Evaluation Harness & Benchmarks**
-  - [ ] Baselines (`backend/app/eval/baselines.py`): B0 rule-based, B1 deterministic graph rules, B2 forensic tracer
-  - [ ] Eval harness (`backend/app/eval/harness.py`): 14 scenarios x k=3 runs in replay mode
-  - [ ] Metrics calculator (`backend/app/eval/metrics.py`): accuracy, FPR, FNR, evidence recall/precision, verification pass rate, injection resistance, tokens, cost
-  - [ ] Graph ablation test: agent without graph tools vs full agent
-  - [ ] Results generator (`backend/app/eval/report.py`): `eval/results.json` and `docs/RESULTS.md`
-  - [ ] *Acceptance Gate:* `make eval` completes in replay mode and generates full comparison tables.
+- [x] **M8: Evaluation Harness & Benchmarks**
+  - [x] Baselines (`backend/app/eval/baselines.py`): B0 rule-based, B1 deterministic graph rules, B2 forensic tracer
+  - [x] Eval harness (`backend/app/eval/harness.py`): 14 scenarios x k=3 runs in replay mode
+  - [x] Metrics calculator (`backend/app/eval/metrics.py`): accuracy, FPR, FNR, evidence recall/precision, verification pass rate, injection resistance, tokens, cost
+  - [x] Graph ablation test: agent without graph tools vs full agent
+  - [x] Results generator (`backend/app/eval/report.py`): `eval/results.json` and `docs/RESULTS.md`
+  - [x] *Acceptance Gate:* `make eval` completes in replay mode and generates full comparison tables.
 
 - [ ] **M9: UI, Docs, and Demo Path**
   - [ ] React + Vite + TypeScript web interface under `web/`:

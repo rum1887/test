@@ -106,11 +106,32 @@ def blast_radius(
     context: ToolContext | None = None,
 ) -> ToolResult:
     c = client or get_graph_client()
-    data = q_blast_radius(c, start_id=start_id, max_depth=max_depth, at=at)
+    paths = q_blast_radius(c, start_id=start_id, max_hops=max_depth, at=at)
+
+    seen_nodes = set()
+    reachable_nodes = []
+    seen_sr = set()
+    sensitive_resources = []
+    for p in paths:
+        for nid in p.get("path_node_ids", []):
+            if nid not in seen_nodes:
+                seen_nodes.add(nid)
+                reachable_nodes.append({"id": nid})
+        tid = p.get("target_id")
+        if tid and tid not in seen_sr:
+            seen_sr.add(tid)
+            sensitive_resources.append({"id": tid, "name": p.get("target_name"), "sensitivity": p.get("sensitivity")})
+
+    data = {
+        "total_reachable": len(reachable_nodes),
+        "sensitive_resources_count": len(sensitive_resources),
+        "sensitive_resources": sensitive_resources,
+        "reachable_nodes": reachable_nodes,
+    }
     evidence_ids = [f"ev:node:{start_id}"]
-    for sr in data.get("sensitive_resources", []):
+    for sr in sensitive_resources:
         evidence_ids.append(f"ev:node:{sr['id']}")
-    for rn in data.get("reachable_nodes", []):
+    for rn in reachable_nodes:
         evidence_ids.append(f"ev:node:{rn['id']}")
     return ToolResult(tool="blast_radius", success=True, data=data, evidence_ids=evidence_ids)
 
@@ -229,7 +250,6 @@ def find_convergence(
     for item in data:
         evidence_ids.append(f"ev:node:{item['resource_id']}")
     return ToolResult(tool="find_convergence", success=True, data={"convergences": data}, evidence_ids=evidence_ids)
-
 
 
 # 6. Shortest Path
